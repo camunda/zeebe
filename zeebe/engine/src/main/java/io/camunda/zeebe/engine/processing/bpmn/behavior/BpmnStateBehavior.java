@@ -14,6 +14,7 @@ import io.camunda.zeebe.engine.processing.variable.VariableBehavior;
 import io.camunda.zeebe.engine.state.deployment.DeployedProcess;
 import io.camunda.zeebe.engine.state.immutable.ElementInstanceState;
 import io.camunda.zeebe.engine.state.immutable.JobState;
+import io.camunda.zeebe.engine.state.immutable.PendingSequenceFlowState;
 import io.camunda.zeebe.engine.state.immutable.ProcessState;
 import io.camunda.zeebe.engine.state.immutable.ProcessingState;
 import io.camunda.zeebe.engine.state.immutable.VariableState;
@@ -21,6 +22,8 @@ import io.camunda.zeebe.engine.state.instance.ElementInstance;
 import io.camunda.zeebe.protocol.record.value.BpmnElementType;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.agrona.DirectBuffer;
 
 public final class BpmnStateBehavior {
@@ -30,6 +33,7 @@ public final class BpmnStateBehavior {
   private final JobState jobState;
   private final ProcessState processState;
   private final VariableBehavior variableBehavior;
+  private final PendingSequenceFlowState pendingSequenceFlowState;
 
   public BpmnStateBehavior(
       final ProcessingState processingState, final VariableBehavior variableBehavior) {
@@ -39,6 +43,7 @@ public final class BpmnStateBehavior {
     elementInstanceState = processingState.getElementInstanceState();
     variablesState = processingState.getVariableState();
     jobState = processingState.getJobState();
+    pendingSequenceFlowState = processingState.getPendingSequenceFlowState();
   }
 
   public ElementInstance getElementInstance(final BpmnElementContext context) {
@@ -96,6 +101,20 @@ public final class BpmnStateBehavior {
 
   public ElementInstance getFlowScopeInstance(final BpmnElementContext context) {
     return elementInstanceState.getInstance(context.getFlowScopeKey());
+  }
+
+  public List<BpmnElementContext> getChildInstances(final BpmnElementContext context) {
+    return elementInstanceState.getChildren(context.getElementInstanceKey()).stream()
+        .map(
+            childInstance ->
+                context.copy(
+                    childInstance.getKey(), childInstance.getValue(), childInstance.getState()))
+        .collect(Collectors.toList());
+  }
+
+  public Set<DirectBuffer> getPendingSequenceFlowIds(final BpmnElementContext context) {
+    return pendingSequenceFlowState.getSequenceFlowIds(
+        context.getTenantId(), context.getFlowScopeKey());
   }
 
   public BpmnElementContext getFlowScopeContext(final BpmnElementContext context) {

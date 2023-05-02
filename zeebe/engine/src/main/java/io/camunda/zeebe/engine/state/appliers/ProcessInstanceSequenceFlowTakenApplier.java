@@ -10,6 +10,7 @@ package io.camunda.zeebe.engine.state.appliers;
 import io.camunda.zeebe.engine.processing.deployment.model.element.ExecutableSequenceFlow;
 import io.camunda.zeebe.engine.state.TypedEventApplier;
 import io.camunda.zeebe.engine.state.mutable.MutableElementInstanceState;
+import io.camunda.zeebe.engine.state.mutable.MutablePendingSequenceFlowState;
 import io.camunda.zeebe.engine.state.mutable.MutableProcessState;
 import io.camunda.zeebe.protocol.impl.record.value.processinstance.ProcessInstanceRecord;
 import io.camunda.zeebe.protocol.record.intent.ProcessInstanceIntent;
@@ -21,12 +22,15 @@ final class ProcessInstanceSequenceFlowTakenApplier
 
   private final MutableElementInstanceState elementInstanceState;
   private final MutableProcessState processState;
+  private final MutablePendingSequenceFlowState pendingSequenceFlowState;
 
   public ProcessInstanceSequenceFlowTakenApplier(
       final MutableElementInstanceState elementInstanceState,
-      final MutableProcessState processState) {
+      final MutableProcessState processState,
+      final MutablePendingSequenceFlowState pendingSequenceFlowState) {
     this.elementInstanceState = elementInstanceState;
     this.processState = processState;
+    this.pendingSequenceFlowState = pendingSequenceFlowState;
   }
 
   @Override
@@ -43,6 +47,11 @@ final class ProcessInstanceSequenceFlowTakenApplier
     final var flowScopeInstance = elementInstanceState.getInstance(value.getFlowScopeKey());
     flowScopeInstance.incrementActiveSequenceFlows();
     elementInstanceState.updateInstance(flowScopeInstance);
+
+    // Stores the pending sequence flow that helps to determine
+    // if an inclusive gateway can be activated or not.
+    pendingSequenceFlowState.create(
+        value.getTenantId(), value.getFlowScopeKey(), value.getElementId());
 
     final var sequenceFlow =
         processState.getFlowElement(

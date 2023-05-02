@@ -24,6 +24,7 @@ import io.camunda.zeebe.engine.state.instance.DbElementInstanceState;
 import io.camunda.zeebe.engine.state.instance.DbEventScopeInstanceState;
 import io.camunda.zeebe.engine.state.instance.DbIncidentState;
 import io.camunda.zeebe.engine.state.instance.DbJobState;
+import io.camunda.zeebe.engine.state.instance.DbPendingSequenceFlowState;
 import io.camunda.zeebe.engine.state.instance.DbTimerInstanceState;
 import io.camunda.zeebe.engine.state.instance.DbUserTaskState;
 import io.camunda.zeebe.engine.state.message.DbMessageStartEventSubscriptionState;
@@ -46,6 +47,7 @@ import io.camunda.zeebe.engine.state.mutable.MutableMessageStartEventSubscriptio
 import io.camunda.zeebe.engine.state.mutable.MutableMessageState;
 import io.camunda.zeebe.engine.state.mutable.MutableMessageSubscriptionState;
 import io.camunda.zeebe.engine.state.mutable.MutableMigrationState;
+import io.camunda.zeebe.engine.state.mutable.MutablePendingSequenceFlowState;
 import io.camunda.zeebe.engine.state.mutable.MutableProcessMessageSubscriptionState;
 import io.camunda.zeebe.engine.state.mutable.MutableProcessState;
 import io.camunda.zeebe.engine.state.mutable.MutableProcessingState;
@@ -88,6 +90,7 @@ public class ProcessingDbState implements MutableProcessingState {
   private final MutableDistributionState distributionState;
   private final MutableUserTaskState userTaskState;
   private final MutableCompensationSubscriptionState compensationSubscriptionState;
+  private final MutablePendingSequenceFlowState pendingSequenceFlowState;
   private final int partitionId;
 
   public ProcessingDbState(
@@ -129,6 +132,8 @@ public class ProcessingDbState implements MutableProcessingState {
     userTaskState = new DbUserTaskState(zeebeDb, transactionContext);
     compensationSubscriptionState =
         new DbCompensationSubscriptionState(zeebeDb, transactionContext);
+
+    pendingSequenceFlowState = new DbPendingSequenceFlowState(zeebeDb, transactionContext);
   }
 
   @Override
@@ -237,6 +242,11 @@ public class ProcessingDbState implements MutableProcessingState {
   @Override
   public MutableCompensationSubscriptionState getCompensationSubscriptionState() {
     return compensationSubscriptionState;
+  }
+
+  @Override
+  public MutablePendingSequenceFlowState getPendingSequenceFlowState() {
+    return pendingSequenceFlowState;
   }
 
   @Override
