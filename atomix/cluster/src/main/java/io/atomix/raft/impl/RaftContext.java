@@ -39,6 +39,7 @@ import io.atomix.raft.cluster.RaftMember;
 import io.atomix.raft.cluster.RaftMember.Type;
 import io.atomix.raft.cluster.impl.DefaultRaftMember;
 import io.atomix.raft.cluster.impl.RaftClusterContext;
+import io.atomix.raft.cluster.impl.RaftMemberContext;
 import io.atomix.raft.metrics.RaftReplicationMetrics;
 import io.atomix.raft.metrics.RaftRoleMetrics;
 import io.atomix.raft.metrics.RaftServiceMetrics;
@@ -90,6 +91,7 @@ import java.net.ConnectException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
@@ -618,6 +620,33 @@ public class RaftContext implements AutoCloseable, HealthMonitorable {
     }
 
     return CompletableFuture.runAsync(raftLog::forceFlush, threadContext);
+  }
+
+  public CompletableFuture<Void> transferLeadership() {
+    threadContext.checkThread();
+    final var localMemberId = cluster.getLocalMember().memberId();
+    final var next =
+        Optional.ofNullable(electionConfig.getPrimary())
+            .filter(primary -> !primary.equals(localMemberId))
+            .or(
+                () ->
+                    cluster.getReplicationTargets().stream()
+                        .max(Comparator.comparing(RaftMemberContext::getMatchIndex))
+                        .map(context -> context.getMember().memberId()));
+    if (next.isPresent()) {
+      log.info("Transferring leadership to {}", next.get());
+      return protocol
+          .transfer(next.get(), TransferRequest.builder().withMember(localMemberId).build())
+          .exceptionally(
+              error -> {
+                log.warn("Failed to transfer leadership to {}", next.get(), error);
+                return null;
+              })
+          .thenApply(ignored -> null);
+    } else {
+      log.debug("No suitable target found for leadership transfer");
+      return CompletableFuture.completedFuture(null);
+    }
   }
 
   /** Attempts to become the leader. */
