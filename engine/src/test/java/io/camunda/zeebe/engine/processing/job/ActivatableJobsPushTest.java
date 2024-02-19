@@ -20,7 +20,6 @@ import io.camunda.zeebe.engine.util.RecordingJobStreamer;
 import io.camunda.zeebe.engine.util.RecordingJobStreamer.RecordingJobStream;
 import io.camunda.zeebe.msgpack.value.StringValue;
 import io.camunda.zeebe.protocol.impl.record.value.job.JobRecord;
-import io.camunda.zeebe.protocol.impl.stream.job.JobActivationProperties;
 import io.camunda.zeebe.protocol.impl.stream.job.JobActivationPropertiesImpl;
 import io.camunda.zeebe.protocol.record.Record;
 import io.camunda.zeebe.protocol.record.RecordValue;
@@ -67,30 +66,25 @@ public class ActivatableJobsPushTest {
       new RecordingExporterTestWatcher();
 
   private RecordingJobStream jobStream;
-  private JobActivationProperties jobActivationProperties;
   private String jobType;
-  private DirectBuffer jobTypeBuffer;
   private DirectBuffer worker;
-  private Long timeout;
   private Map<String, Object> variables;
   private final List<Long> activeProcessInstances = new ArrayList<>();
 
   @Before
   public void setUp() {
     jobType = Strings.newRandomValidBpmnId();
-    jobTypeBuffer = BufferUtil.wrapString(jobType);
     worker = BufferUtil.wrapString("test");
     variables = Map.of("a", "valA", "b", "valB", "c", "valC");
-    timeout = 30000L;
 
-    jobActivationProperties =
+    final var jobActivationProperties =
         new JobActivationPropertiesImpl()
             .setWorker(worker, 0, worker.capacity())
-            .setTimeout(timeout)
+            .setTimeout(30_000L)
             .setTenantIds(List.of(TenantOwned.DEFAULT_TENANT_IDENTIFIER))
             .setFetchVariables(
                 List.of(new StringValue("a"), new StringValue("b"), new StringValue("c")));
-    jobStream = JOB_STREAMER.addJobStream(jobTypeBuffer, jobActivationProperties);
+    jobStream = JOB_STREAMER.addJobStream(BufferUtil.wrapString(jobType), jobActivationProperties);
   }
 
   @After
@@ -135,7 +129,7 @@ public class ActivatableJobsPushTest {
     // then
     jobRecords(JobIntent.CREATED).withType(jobType).await();
     final List<Long> batchJobKeys =
-        IntStream.range(0, 3)
+        IntStream.range(0, numberOfJobs)
             .mapToObj(
                 index ->
                     jobBatchRecords(JobBatchIntent.ACTIVATED)
