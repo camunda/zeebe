@@ -23,6 +23,7 @@ import io.camunda.zeebe.protocol.impl.record.value.job.JobRecord;
 import io.camunda.zeebe.protocol.impl.stream.job.JobActivationPropertiesImpl;
 import io.camunda.zeebe.protocol.record.Record;
 import io.camunda.zeebe.protocol.record.RecordValue;
+import io.camunda.zeebe.protocol.record.ValueType;
 import io.camunda.zeebe.protocol.record.intent.IncidentIntent;
 import io.camunda.zeebe.protocol.record.intent.Intent;
 import io.camunda.zeebe.protocol.record.intent.JobBatchIntent;
@@ -40,7 +41,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -114,7 +115,13 @@ public class ActivatableJobsPushTest {
     assertThat(batch.getJobKeys()).contains(jobKey);
 
     // assert event order
-    assertEventOrder(JobIntent.CREATED, JobBatchIntent.ACTIVATED);
+    assertThat(
+            records()
+                .onlyEvents()
+                .filter(r -> Set.of(ValueType.JOB, ValueType.JOB_BATCH).contains(r.getValueType()))
+                .limit(2))
+        .extracting(Record::getIntent)
+        .containsExactly(JobIntent.CREATED, JobBatchIntent.ACTIVATED);
 
     // assert job stream
     assertActivatedJob(jobKey, activationCount);
@@ -129,13 +136,9 @@ public class ActivatableJobsPushTest {
     // then
     jobRecords(JobIntent.CREATED).withType(jobType).await();
     final List<Long> batchJobKeys =
-        IntStream.range(0, numberOfJobs)
-            .mapToObj(
-                index ->
-                    jobBatchRecords(JobBatchIntent.ACTIVATED)
-                        .withType(jobType)
-                        .skip(index)
-                        .getFirst())
+        jobBatchRecords(JobBatchIntent.ACTIVATED)
+            .withType(jobType)
+            .limit(numberOfJobs)
             .flatMap(record -> record.getValue().getJobKeys().stream())
             .collect(Collectors.toList());
     assertThat(batchJobKeys).isEqualTo(jobKeys);
@@ -164,7 +167,7 @@ public class ActivatableJobsPushTest {
     jobRecords(TIMED_OUT).withType(jobType).await();
 
     // then
-    assertJobActivations(activationCount);
+    assertMinimumNumberOfJobsActivated(activationCount);
     assertEventOrder(JobIntent.TIME_OUT, JobIntent.TIMED_OUT, JobBatchIntent.ACTIVATED);
     assertActivatedJob(jobKey, activationCount);
   }
@@ -181,7 +184,7 @@ public class ActivatableJobsPushTest {
 
     // then
     jobRecords(JobIntent.FAILED).withType(jobType).await();
-    assertJobActivations(activationCount);
+    assertMinimumNumberOfJobsActivated(activationCount);
     assertEventOrder(JobIntent.FAIL, JobIntent.FAILED, JobBatchIntent.ACTIVATED);
     assertActivatedJob(jobKey, activationCount);
   }
@@ -199,7 +202,7 @@ public class ActivatableJobsPushTest {
 
     // then
     jobRecords(JobIntent.RECURRED_AFTER_BACKOFF).withType(jobType).await();
-    assertJobActivations(activationCount);
+    assertMinimumNumberOfJobsActivated(activationCount);
     assertEventOrder(
         JobIntent.RECUR_AFTER_BACKOFF, JobIntent.RECURRED_AFTER_BACKOFF, JobBatchIntent.ACTIVATED);
     assertActivatedJob(jobKey, activationCount);
@@ -220,7 +223,7 @@ public class ActivatableJobsPushTest {
 
     // then
     incidentRecords(IncidentIntent.RESOLVED).withJobKey(jobKey).await();
-    assertJobActivations(activationCount);
+    assertMinimumNumberOfJobsActivated(activationCount);
     assertEventOrder(IncidentIntent.RESOLVE, IncidentIntent.RESOLVED, JobBatchIntent.ACTIVATED);
     assertActivatedJob(jobKey, activationCount);
   }
@@ -263,20 +266,16 @@ public class ActivatableJobsPushTest {
     }
   }
 
-  private void assertJobActivations(final int expectedActivationCount) {
-    assertThat(expectedActivationCount)
-        .as("Expected activation count should be greater than 0.")
-        .isGreaterThan(0);
-    final boolean allJobsActivated =
-        IntStream.range(0, expectedActivationCount)
-            .mapToObj(
-                index ->
-                    jobBatchRecords(JobBatchIntent.ACTIVATED)
-                        .withType(jobType)
-                        .skip(index)
-                        .findFirst())
-            .allMatch(Optional::isPresent);
-    assertThat(allJobsActivated).as("Not all jobs were activated.").isTrue();
+  private void assertMinimumNumberOfJobsActivated(final int minExpectedActivations) {
+    final long activatedJobsCount =
+        jobBatchRecords(JobBatchIntent.ACTIVATED)
+            .withType(jobType)
+            .limit(minExpectedActivations)
+            .count();
+
+    assertThat(activatedJobsCount)
+        .as("Not all jobs were activated.")
+        .isEqualTo(minExpectedActivations);
   }
 
   private void assertActivatedJob(final Long jobKey, final int activationCount) {
