@@ -10,6 +10,7 @@ package io.camunda.zeebe.engine.processing.processinstance;
 import static io.camunda.zeebe.engine.processing.processinstance.ProcessInstanceMigrationPreconditionChecker.*;
 
 import io.camunda.zeebe.engine.Loggers;
+import io.camunda.zeebe.engine.processing.common.CommandDistributionBehavior;
 import io.camunda.zeebe.engine.processing.streamprocessor.TypedRecordProcessor;
 import io.camunda.zeebe.engine.processing.streamprocessor.writers.StateWriter;
 import io.camunda.zeebe.engine.processing.streamprocessor.writers.TypedRejectionWriter;
@@ -20,24 +21,31 @@ import io.camunda.zeebe.engine.state.immutable.ElementInstanceState;
 import io.camunda.zeebe.engine.state.immutable.EventScopeInstanceState;
 import io.camunda.zeebe.engine.state.immutable.IncidentState;
 import io.camunda.zeebe.engine.state.immutable.JobState;
+import io.camunda.zeebe.engine.state.immutable.ProcessMessageSubscriptionState;
 import io.camunda.zeebe.engine.state.immutable.ProcessState;
 import io.camunda.zeebe.engine.state.immutable.ProcessingState;
 import io.camunda.zeebe.engine.state.immutable.UserTaskState;
 import io.camunda.zeebe.engine.state.immutable.VariableState;
 import io.camunda.zeebe.engine.state.instance.ElementInstance;
 import io.camunda.zeebe.msgpack.spec.MsgPackHelper;
+import io.camunda.zeebe.protocol.impl.record.value.message.MessageSubscriptionRecord;
 import io.camunda.zeebe.protocol.impl.record.value.processinstance.ProcessInstanceMigrationRecord;
 import io.camunda.zeebe.protocol.impl.record.value.variable.VariableRecord;
 import io.camunda.zeebe.protocol.record.RejectionType;
+import io.camunda.zeebe.protocol.record.ValueType;
 import io.camunda.zeebe.protocol.record.intent.JobIntent;
+import io.camunda.zeebe.protocol.record.intent.MessageSubscriptionIntent;
 import io.camunda.zeebe.protocol.record.intent.ProcessInstanceIntent;
 import io.camunda.zeebe.protocol.record.intent.ProcessInstanceMigrationIntent;
+import io.camunda.zeebe.protocol.record.intent.ProcessMessageSubscriptionIntent;
 import io.camunda.zeebe.protocol.record.intent.UserTaskIntent;
 import io.camunda.zeebe.protocol.record.intent.VariableIntent;
+import io.camunda.zeebe.protocol.record.value.BpmnEventType;
 import io.camunda.zeebe.protocol.record.value.ProcessInstanceMigrationRecordValue.ProcessInstanceMigrationMappingInstructionValue;
 import io.camunda.zeebe.stream.api.records.TypedRecord;
 import io.camunda.zeebe.util.buffer.BufferUtil;
 import java.util.ArrayDeque;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -61,9 +69,13 @@ public class ProcessInstanceMigrationMigrateProcessor
   private final VariableState variableState;
   private final IncidentState incidentState;
   private final EventScopeInstanceState eventScopeInstanceState;
+  private final ProcessMessageSubscriptionState processMessageSubscriptionState;
+  private final CommandDistributionBehavior commandDistributionBehavior;
 
   public ProcessInstanceMigrationMigrateProcessor(
-      final Writers writers, final ProcessingState processingState) {
+      final Writers writers,
+      final ProcessingState processingState,
+      final CommandDistributionBehavior commandDistributionBehavior) {
     stateWriter = writers.state();
     responseWriter = writers.response();
     rejectionWriter = writers.rejection();
@@ -74,6 +86,8 @@ public class ProcessInstanceMigrationMigrateProcessor
     variableState = processingState.getVariableState();
     incidentState = processingState.getIncidentState();
     eventScopeInstanceState = processingState.getEventScopeInstanceState();
+    processMessageSubscriptionState = processingState.getProcessMessageSubscriptionState();
+    this.commandDistributionBehavior = commandDistributionBehavior;
   }
 
   @Override
@@ -182,8 +196,13 @@ public class ProcessInstanceMigrationMigrateProcessor
         targetProcessDefinition, targetElementId, elementInstance, processInstanceKey);
     requireUnchangedFlowScope(
         elementInstanceState, elementInstanceRecord, targetProcessDefinition, targetElementId);
-    requireNoBoundaryEventInSource(sourceProcessDefinition, elementInstanceRecord);
-    requireNoBoundaryEventInTarget(targetProcessDefinition, targetElementId, elementInstanceRecord);
+    requireNoBoundaryEventInSource(
+        sourceProcessDefinition, elementInstanceRecord, EnumSet.of(BpmnEventType.MESSAGE));
+    requireNoBoundaryEventInTarget(
+        targetProcessDefinition,
+        targetElementId,
+        elementInstanceRecord,
+        EnumSet.of(BpmnEventType.MESSAGE));
     requireNoConcurrentCommand(eventScopeInstanceState, elementInstance, processInstanceKey);
 
     stateWriter.appendFollowUpEvent(
@@ -251,6 +270,42 @@ public class ProcessInstanceMigrationMigrateProcessor
                         .setProcessDefinitionKey(targetProcessDefinition.getKey())
                         .setBpmnProcessId(targetProcessDefinition.getBpmnProcessId())
                         .setTenantId(elementInstance.getValue().getTenantId())));
+
+    processMessageSubscriptionState.visitElementSubscriptions(
+        elementInstance.getKey(),
+        subscription -> {
+          if (!subscription.isOpen()) {
+            // ignore subscriptions that are opening or closing
+            // todo consider whether this makes sense or not
+            return true;
+          }
+          stateWriter.appendFollowUpEvent(
+              subscription.getKey(),
+              ProcessMessageSubscriptionIntent.MIGRATING,
+              subscription
+                  .getRecord()
+                  .setBpmnProcessId(targetProcessDefinition.getBpmnProcessId())
+                  .setElementId(BufferUtil.wrapString(targetElementId))
+                  .setVariables(NIL_VALUE));
+          // todo: consider whether subscription.key is unique enough for command distribution
+          // for example, can we have multiple distributions for the same subscription
+          // simultaneously?
+          commandDistributionBehavior.distributeCommand(
+              subscription.getKey(),
+              ValueType.MESSAGE_SUBSCRIPTION,
+              MessageSubscriptionIntent.MIGRATE,
+              new MessageSubscriptionRecord()
+                  .setElementInstanceKey(elementInstance.getKey())
+                  .setProcessInstanceKey(processInstanceKey)
+                  .setCorrelationKey(subscription.getRecord().getCorrelationKeyBuffer())
+                  .setMessageKey(subscription.getRecord().getMessageKey())
+                  .setMessageName(subscription.getRecord().getMessageNameBuffer())
+                  .setBpmnProcessId(targetProcessDefinition.getBpmnProcessId())
+                  .setInterrupting(subscription.getRecord().isInterrupting())
+                  .setTenantId(subscription.getRecord().getTenantId())
+                  .setVariables(NIL_VALUE));
+          return true;
+        });
   }
 
   /**

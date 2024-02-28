@@ -22,6 +22,7 @@ import io.camunda.zeebe.engine.state.instance.EventTrigger;
 import io.camunda.zeebe.protocol.impl.record.value.processinstance.ProcessInstanceRecord;
 import io.camunda.zeebe.protocol.record.RejectionType;
 import io.camunda.zeebe.protocol.record.value.BpmnElementType;
+import io.camunda.zeebe.protocol.record.value.BpmnEventType;
 import io.camunda.zeebe.protocol.record.value.ProcessInstanceMigrationRecordValue.ProcessInstanceMigrationMappingInstructionValue;
 import io.camunda.zeebe.util.buffer.BufferUtil;
 import java.util.EnumSet;
@@ -95,13 +96,13 @@ public final class ProcessInstanceMigrationPreconditionChecker {
   private static final String ERROR_ACTIVE_ELEMENT_WITH_BOUNDARY_EVENT =
       """
               Expected to migrate process instance '%s' \
-              but active element with id '%s' has a boundary event. \
-              Migrating active elements with boundary events is not possible yet.""";
+              but active element with id '%s' has one or more boundary events of types '%s'. \
+              Migrating active elements with boundary events of these types is not possible yet.""";
   private static final String ERROR_TARGET_ELEMENT_WITH_BOUNDARY_EVENT =
       """
               Expected to migrate process instance '%s' \
-              but target element with id '%s' has a boundary event. \
-              Migrating target elements with boundary events is not possible yet.""";
+              but target element with id '%s' has one or more boundary events of types '%s'. \
+              Migrating target elements with boundary events of these types is not possible yet.""";
   private static final String ERROR_CONCURRENT_COMMAND =
       "Expected to migrate process instance '%s' but a concurrent command was executed on the process instance. Please retry the migration.";
   private static final long NO_PARENT = -1L;
@@ -464,27 +465,34 @@ public final class ProcessInstanceMigrationPreconditionChecker {
 
   /**
    * Checks whether the given source process definition contains a boundary event. Throws an
-   * exception if the source process definition contains a boundary event.
+   * exception if the source process definition contains a boundary event that is not allowed.
    *
    * @param sourceProcessDefinition source process definition to do the check
    * @param elementInstanceRecord element instance to be logged
+   * @param allowedEventTypes allowed event types for the boundary event
    */
   public static void requireNoBoundaryEventInSource(
       final DeployedProcess sourceProcessDefinition,
-      final ProcessInstanceRecord elementInstanceRecord) {
-    final boolean hasBoundaryEventInSource =
-        !sourceProcessDefinition
+      final ProcessInstanceRecord elementInstanceRecord,
+      final EnumSet<BpmnEventType> allowedEventTypes) {
+    final List<String> disallowedBoundaryEventTypesInSource =
+        sourceProcessDefinition
             .getProcess()
             .getElementById(elementInstanceRecord.getElementId(), ExecutableActivity.class)
             .getBoundaryEvents()
-            .isEmpty();
+            .stream()
+            .map(AbstractFlowElement::getEventType)
+            .filter(eventType -> !allowedEventTypes.contains(eventType))
+            .map(BpmnEventType::name)
+            .toList();
 
-    if (hasBoundaryEventInSource) {
+    if (!disallowedBoundaryEventTypesInSource.isEmpty()) {
       final String reason =
           String.format(
               ERROR_ACTIVE_ELEMENT_WITH_BOUNDARY_EVENT,
               elementInstanceRecord.getProcessInstanceKey(),
-              elementInstanceRecord.getElementId());
+              elementInstanceRecord.getElementId(),
+              String.join(",", disallowedBoundaryEventTypesInSource));
       throw new ProcessInstanceMigrationPreconditionFailedException(
           reason, RejectionType.INVALID_STATE);
     }
@@ -497,24 +505,31 @@ public final class ProcessInstanceMigrationPreconditionChecker {
    * @param targetProcessDefinition target process definition to do the check
    * @param targetElementId target element id to retrieve the target element
    * @param elementInstanceRecord element instance to be logged
+   * @param allowedEventTypes allowed event types for the boundary event
    */
   public static void requireNoBoundaryEventInTarget(
       final DeployedProcess targetProcessDefinition,
       final String targetElementId,
-      final ProcessInstanceRecord elementInstanceRecord) {
-    final boolean hasBoundaryEventInTarget =
-        !targetProcessDefinition
+      final ProcessInstanceRecord elementInstanceRecord,
+      final EnumSet<BpmnEventType> allowedEventTypes) {
+    final List<String> disallowedBoundaryEventTypesInTarget =
+        targetProcessDefinition
             .getProcess()
             .getElementById(targetElementId, ExecutableActivity.class)
             .getBoundaryEvents()
-            .isEmpty();
+            .stream()
+            .map(AbstractFlowElement::getEventType)
+            .filter(eventType -> !allowedEventTypes.contains(eventType))
+            .map(BpmnEventType::name)
+            .toList();
 
-    if (hasBoundaryEventInTarget) {
+    if (!disallowedBoundaryEventTypesInTarget.isEmpty()) {
       final String reason =
           String.format(
               ERROR_TARGET_ELEMENT_WITH_BOUNDARY_EVENT,
               elementInstanceRecord.getProcessInstanceKey(),
-              elementInstanceRecord.getElementId());
+              elementInstanceRecord.getElementId(),
+              String.join(",", disallowedBoundaryEventTypesInTarget));
       throw new ProcessInstanceMigrationPreconditionFailedException(
           reason, RejectionType.INVALID_STATE);
     }
