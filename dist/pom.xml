@@ -124,6 +124,57 @@
     </dependency>
 
     <dependency>
+      <groupId>io.camunda</groupId>
+      <artifactId>operate-webapp</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.camunda</groupId>
+      <artifactId>operate-webjar</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.camunda</groupId>
+      <artifactId>operate-archiver</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.camunda</groupId>
+      <artifactId>operate-importer</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.camunda</groupId>
+      <artifactId>operate-importer-8_4</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.camunda</groupId>
+      <artifactId>operate-importer-8_5</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.camunda</groupId>
+      <artifactId>operate-data-generator</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.camunda</groupId>
+      <artifactId>operate-common</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>commons-logging</groupId>
+          <artifactId>commons-logging</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>io.camunda</groupId>
+      <artifactId>operate-schema</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
     </dependency>
@@ -183,7 +234,43 @@
     <!-- needed for the Spring actuators which enable health checks and liveness probes-->
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-webflux</artifactId>
+      <artifactId>spring-boot-starter-web</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-logging</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-thymeleaf</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.thymeleaf</groupId>
+      <artifactId>thymeleaf</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.swagger.core.v3</groupId>
+      <artifactId>swagger-annotations-jakarta</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-config</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-web</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>jakarta.annotation</groupId>
+      <artifactId>jakarta.annotation-api</artifactId>
     </dependency>
 
     <dependency>
@@ -213,12 +300,7 @@
 
     <dependency>
       <groupId>org.springframework</groupId>
-      <artifactId>spring-webflux</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>io.projectreactor</groupId>
-      <artifactId>reactor-core</artifactId>
+      <artifactId>spring-webmvc</artifactId>
     </dependency>
 
     <dependency>
@@ -391,6 +473,14 @@
               <mainClass>io.camunda.zeebe.gateway.StandaloneGateway</mainClass>
             </program>
             <program>
+              <id>operate</id>
+              <mainClass>io.camunda.standalone.StandaloneOperate</mainClass>
+            </program>
+            <program>
+              <id>camunda</id>
+              <mainClass>io.camunda.standalone.StandaloneCamunda</mainClass>
+            </program>
+            <program>
               <id>restore</id>
               <mainClass>io.camunda.zeebe.restore.RestoreApp</mainClass>
             </program>
@@ -469,8 +559,24 @@
             <dependency>io.camunda:zeebe-elasticsearch-exporter</dependency>
             <dependency>io.camunda:zeebe-opensearch-exporter</dependency>
 
+            <!-- not clear why, but for now okay -->
+            <dependency>io.swagger.core.v3:swagger-annotations</dependency>
+            <dependency>io.camunda:zeebe-gateway-rest</dependency>
+
+            <!-- operate -->
+            <dependency>io.camunda:operate-importer</dependency>
+            <dependency>io.camunda:operate-importer-8_4</dependency>
+            <dependency>io.camunda:operate-importer-8_5</dependency>
+            <dependency>io.camunda:operate-data-generator</dependency>
+            <dependency>io.camunda:operate-schema</dependency>
+            <dependency>io.camunda:operate-webjar</dependency>
+            <dependency>io.camunda:operate-archiver</dependency>
+            <dependency>io.camunda:operate-webapp</dependency>
+            <dependency>org.springframework.boot:spring-boot-starter-thymeleaf</dependency>
+            <dependency>org.thymeleaf:thymeleaf</dependency>
+
             <!-- Needed for Spring Actuators, which provide health checks and liveness/readiness probed -->
-            <dependency>org.springframework.boot:spring-boot-starter-webflux</dependency>
+            <dependency>org.springframework.boot:spring-boot-starter-web</dependency>
             <dependency>org.openapitools:jackson-databind-nullable</dependency>
             <dependency>io.micrometer:micrometer-registry-prometheus</dependency>
 

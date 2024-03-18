@@ -20,8 +20,6 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextClosedEvent;
 
@@ -31,14 +29,15 @@ import org.springframework.context.event.ContextClosedEvent;
  *
  * <p>See {@link #main(String[])} for more.
  */
-@SpringBootApplication(
-    proxyBeanMethods = false,
-    scanBasePackages = {
-      "io.camunda.zeebe.broker",
-      "io.camunda.zeebe.shared",
-      "io.camunda.zeebe.gateway.rest"
-    })
-@ConfigurationPropertiesScan(basePackages = {"io.camunda.zeebe.broker", "io.camunda.zeebe.shared"})
+// @SpringBootApplication(
+//    proxyBeanMethods = false,
+//    scanBasePackages = {
+//      "io.camunda.zeebe.broker",
+//      "io.camunda.zeebe.shared",
+//      "io.camunda.zeebe.gateway.rest"
+//    })
+// @ConfigurationPropertiesScan(basePackages = {"io.camunda.zeebe.broker",
+// "io.camunda.zeebe.shared"})
 public class StandaloneBroker
     implements CommandLineRunner, ApplicationListener<ContextClosedEvent> {
   private static final Logger LOGGER = Loggers.SYSTEM_LOGGER;
@@ -76,7 +75,7 @@ public class StandaloneBroker
     final var application =
         MainSupport.createDefaultApplicationBuilder()
             .sources(StandaloneBroker.class)
-            .profiles(Profile.BROKER.getId())
+            .profiles(Profile.BROKER.getId(), "zeebe")
             .build(args);
 
     application.run();
