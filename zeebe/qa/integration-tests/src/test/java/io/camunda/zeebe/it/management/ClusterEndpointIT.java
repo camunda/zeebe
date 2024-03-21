@@ -10,6 +10,7 @@ package io.camunda.zeebe.it.management;
 import static org.assertj.core.api.Assertions.*;
 
 import feign.FeignException;
+import io.atomix.cluster.MemberId;
 import io.camunda.zeebe.management.cluster.Operation;
 import io.camunda.zeebe.management.cluster.Operation.OperationEnum;
 import io.camunda.zeebe.qa.util.actuator.ClusterActuator;
@@ -115,6 +116,23 @@ final class ClusterEndpointIT {
 
       // then
       assertThat(response.getExpectedTopology()).hasSize(3);
+    }
+  }
+
+  @Test
+  void shouldRequestForceScaleDownBrokers() {
+    // create cluster with two brokers
+    try (final var cluster = createCluster(2)) {
+      // given
+      cluster.awaitCompleteTopology();
+      cluster.brokers().get(MemberId.from("1")).close();
+      final var actuator = ClusterActuator.of(cluster.availableGateway());
+
+      // when - force remove broker 1
+      final var response = actuator.scaleBrokers(List.of(0), false, true);
+
+      // then
+      assertThat(response.getExpectedTopology()).hasSize(1);
     }
   }
 

@@ -27,16 +27,10 @@ import io.grpc.Metadata;
 import io.grpc.Metadata.Key;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import org.assertj.core.api.InstanceOfAssertFactories;
-import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -98,12 +92,15 @@ public class GatewayAuthenticationIdentityIT {
           .withEnv("KEYCLOAK_CLIENTS_0_PERMISSIONS_0_DEFINITION", "write:*")
           .withEnv("IDENTITY_RETRY_ATTEMPTS", "90")
           .withEnv("IDENTITY_RETRY_DELAY_SECONDS", "1")
+          // this will enable readiness checks by spring to await ApplicationRunner completion
+          .withEnv("MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED", "true")
+          .withEnv("MANAGEMENT_HEALTH_READINESSSTATE_ENABLED", "true")
           .withNetwork(NETWORK)
           .withExposedPorts(8080, 8082)
           .waitingFor(
               new HttpWaitStrategy()
                   .forPort(8082)
-                  .forPath("/actuator/health")
+                  .forPath("/actuator/health/readiness")
                   .allowInsecure()
                   .forStatusCode(200))
           .withNetworkAliases("identity");
@@ -118,8 +115,6 @@ public class GatewayAuthenticationIdentityIT {
 
   @BeforeAll
   static void beforeAll() {
-    awaitCamundaRealmAvailabilityOnKeycloak();
-
     ZEEBE
         .withBrokerConfig(
             cfg -> {
@@ -207,29 +202,6 @@ public class GatewayAuthenticationIdentityIT {
     }
   }
 
-  /**
-   * Awaits the presence of the Camunda realm and openid keys on the keycloak container. Once
-   * Keycloak and Identity booted up, Identity will eventually configure the Camunda Realm on
-   * Keycloak.
-   */
-  private static void awaitCamundaRealmAvailabilityOnKeycloak() {
-    final var httpClient = HttpClient.newHttpClient();
-    final HttpRequest request =
-        HttpRequest.newBuilder()
-            .uri(URI.create(getKeycloakRealmAddress() + "/protocol/openid-connect/certs"))
-            .build();
-    Awaitility.await()
-        .atMost(Duration.ofSeconds(120))
-        .pollInterval(Duration.ofSeconds(5))
-        .ignoreExceptions()
-        .untilAsserted(
-            () -> {
-              final HttpResponse<String> response =
-                  httpClient.send(request, BodyHandlers.ofString());
-              assertThat(response.statusCode()).isEqualTo(200);
-            });
-  }
-
   private static String getKeycloakRealmAddress() {
     return "http://"
         + KEYCLOAK.getHost()
@@ -240,7 +212,7 @@ public class GatewayAuthenticationIdentityIT {
 
   private ZeebeClientBuilder createZeebeClientBuilder() {
     return ZeebeClient.newClientBuilder()
-        .gatewayAddress(ZEEBE.gatewayAddress())
+        .grpcAddress(ZEEBE.grpcAddress())
         .defaultRequestTimeout(Duration.ofMinutes(1))
         .usePlaintext();
   }

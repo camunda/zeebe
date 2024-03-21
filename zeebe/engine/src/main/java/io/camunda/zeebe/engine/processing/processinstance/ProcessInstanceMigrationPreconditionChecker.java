@@ -7,21 +7,20 @@
  */
 package io.camunda.zeebe.engine.processing.processinstance;
 
-import static io.camunda.zeebe.engine.state.immutable.IncidentState.MISSING_INCIDENT;
-
 import io.camunda.zeebe.auth.impl.TenantAuthorizationCheckerImpl;
 import io.camunda.zeebe.engine.processing.deployment.model.element.AbstractFlowElement;
 import io.camunda.zeebe.engine.processing.deployment.model.element.ExecutableActivity;
+import io.camunda.zeebe.engine.processing.deployment.model.element.ExecutableBoundaryEvent;
 import io.camunda.zeebe.engine.processing.deployment.model.element.ExecutableUserTask;
 import io.camunda.zeebe.engine.state.deployment.DeployedProcess;
 import io.camunda.zeebe.engine.state.immutable.ElementInstanceState;
 import io.camunda.zeebe.engine.state.immutable.EventScopeInstanceState;
-import io.camunda.zeebe.engine.state.immutable.IncidentState;
 import io.camunda.zeebe.engine.state.instance.ElementInstance;
 import io.camunda.zeebe.engine.state.instance.EventTrigger;
 import io.camunda.zeebe.protocol.impl.record.value.processinstance.ProcessInstanceRecord;
 import io.camunda.zeebe.protocol.record.RejectionType;
 import io.camunda.zeebe.protocol.record.value.BpmnElementType;
+import io.camunda.zeebe.protocol.record.value.BpmnEventType;
 import io.camunda.zeebe.protocol.record.value.ProcessInstanceMigrationRecordValue.ProcessInstanceMigrationMappingInstructionValue;
 import io.camunda.zeebe.util.buffer.BufferUtil;
 import java.util.EnumSet;
@@ -35,7 +34,11 @@ import org.agrona.DirectBuffer;
 public final class ProcessInstanceMigrationPreconditionChecker {
 
   private static final EnumSet<BpmnElementType> SUPPORTED_ELEMENT_TYPES =
-      EnumSet.of(BpmnElementType.PROCESS, BpmnElementType.SERVICE_TASK, BpmnElementType.USER_TASK);
+      EnumSet.of(
+          BpmnElementType.PROCESS,
+          BpmnElementType.SERVICE_TASK,
+          BpmnElementType.USER_TASK,
+          BpmnElementType.SUB_PROCESS);
   private static final Set<BpmnElementType> UNSUPPORTED_ELEMENT_TYPES =
       EnumSet.complementOf(SUPPORTED_ELEMENT_TYPES);
 
@@ -67,12 +70,6 @@ public final class ProcessInstanceMigrationPreconditionChecker {
       "Expected to migrate process instance '%s' but active element with id '%s' has an unsupported type. The migration of a %s is not supported.";
   private static final String ERROR_UNMAPPED_ACTIVE_ELEMENT =
       "Expected to migrate process instance '%s' but no mapping instruction defined for active element with id '%s'. Elements cannot be migrated without a mapping.";
-  private static final String ERROR_ELEMENT_WITH_INCIDENT =
-      """
-              Expected to migrate process instance '%s' \
-              but active element with id '%s' has an incident. \
-              Elements cannot be migrated with an incident yet. \
-              Please retry migration after resolving the incident.""";
   private static final String ERROR_ELEMENT_TYPE_CHANGED =
       """
               Expected to migrate process instance '%s' \
@@ -95,8 +92,8 @@ public final class ProcessInstanceMigrationPreconditionChecker {
   private static final String ERROR_ACTIVE_ELEMENT_WITH_BOUNDARY_EVENT =
       """
               Expected to migrate process instance '%s' \
-              but active element with id '%s' has a boundary event. \
-              Migrating active elements with boundary events is not possible yet.""";
+              but active element with id '%s' has one or more boundary events of types '%s'. \
+              Migrating active elements with boundary events of these types is not possible yet.""";
   private static final String ERROR_TARGET_ELEMENT_WITH_BOUNDARY_EVENT =
       """
               Expected to migrate process instance '%s' \
@@ -312,33 +309,6 @@ public final class ProcessInstanceMigrationPreconditionChecker {
   }
 
   /**
-   * Checks whether the given element instance has an incident. Throws an exception if the element
-   * instance has an incident.
-   *
-   * @param incidentState incident state to check for incidents
-   * @param elementInstance element instance to do the check
-   */
-  public static void requireNoIncident(
-      final IncidentState incidentState, final ElementInstance elementInstance) {
-    final boolean hasIncident =
-        incidentState.getProcessInstanceIncidentKey(elementInstance.getKey()) != MISSING_INCIDENT
-            || (elementInstance.getJobKey() > -1L
-                && incidentState.getJobIncidentKey(elementInstance.getJobKey())
-                    != MISSING_INCIDENT);
-
-    if (hasIncident) {
-      final var elementInstanceRecord = elementInstance.getValue();
-      final String reason =
-          String.format(
-              ERROR_ELEMENT_WITH_INCIDENT,
-              elementInstanceRecord.getProcessInstanceKey(),
-              elementInstanceRecord.getElementId());
-      throw new ProcessInstanceMigrationPreconditionFailedException(
-          reason, RejectionType.INVALID_STATE);
-    }
-  }
-
-  /**
    * Checks whether the given element instance has the same element type as the target element.
    * Throws an exception if the element instance has a different type.
    *
@@ -464,27 +434,39 @@ public final class ProcessInstanceMigrationPreconditionChecker {
 
   /**
    * Checks whether the given source process definition contains a boundary event. Throws an
-   * exception if the source process definition contains a boundary event.
+   * exception if the source process definition contains a boundary event that is not allowed.
    *
    * @param sourceProcessDefinition source process definition to do the check
    * @param elementInstanceRecord element instance to be logged
+   * @param allowedEventTypes allowed event types for the boundary event
    */
   public static void requireNoBoundaryEventInSource(
       final DeployedProcess sourceProcessDefinition,
-      final ProcessInstanceRecord elementInstanceRecord) {
-    final boolean hasBoundaryEventInSource =
-        !sourceProcessDefinition
+      final ProcessInstanceRecord elementInstanceRecord,
+      final EnumSet<BpmnEventType> allowedEventTypes) {
+    final List<ExecutableBoundaryEvent> boundaryEvents =
+        sourceProcessDefinition
             .getProcess()
             .getElementById(elementInstanceRecord.getElementId(), ExecutableActivity.class)
-            .getBoundaryEvents()
-            .isEmpty();
+            .getBoundaryEvents();
 
-    if (hasBoundaryEventInSource) {
+    final var rejectedBoundaryEvents =
+        boundaryEvents.stream()
+            .filter(event -> !allowedEventTypes.contains(event.getEventType()))
+            .toList();
+
+    if (!rejectedBoundaryEvents.isEmpty()) {
+      final String rejectedEventTypes =
+          rejectedBoundaryEvents.stream()
+              .map(ExecutableBoundaryEvent::getEventType)
+              .map(BpmnEventType::name)
+              .collect(Collectors.joining(","));
       final String reason =
           String.format(
               ERROR_ACTIVE_ELEMENT_WITH_BOUNDARY_EVENT,
               elementInstanceRecord.getProcessInstanceKey(),
-              elementInstanceRecord.getElementId());
+              elementInstanceRecord.getElementId(),
+              rejectedEventTypes);
       throw new ProcessInstanceMigrationPreconditionFailedException(
           reason, RejectionType.INVALID_STATE);
     }

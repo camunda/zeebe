@@ -31,6 +31,7 @@ import io.atomix.utils.logging.LoggerContext;
 import java.net.ConnectException;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
@@ -282,6 +283,11 @@ public final class ReconfigurationHelper {
             .filter(m -> !m.equals(raftContext.getCluster().getLocalMember().memberId()))
             .collect(Collectors.toSet());
 
+    if (otherMembers.isEmpty()) {
+      future.complete(null);
+      return;
+    }
+
     final var quorum =
         new ForceConfigureQuorum(
             success -> {
@@ -300,7 +306,8 @@ public final class ReconfigurationHelper {
             .withTerm(configuration.term())
             .withIndex(configuration.index())
             .withTime(configuration.time())
-            .withNewMembers(Set.copyOf(configuration.newMembers()))
+            // Beware that using ImmutableCollections can break Kryo serialization
+            .withNewMembers(new HashSet<>(configuration.newMembers()))
             .from(raftContext.getCluster().getLocalMember().memberId())
             .build();
 

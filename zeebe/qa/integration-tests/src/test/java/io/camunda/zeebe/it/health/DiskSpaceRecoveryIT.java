@@ -54,7 +54,8 @@ final class DiskSpaceRecoveryIT {
           .withEnv("ZEEBE_BROKER_DATA_LOGSEGMENTSIZE", "1MB")
           .withEnv("ZEEBE_BROKER_NETWORK_MAXMESSAGESIZE", "1MB")
           .withEnv("ZEEBE_BROKER_DATA_DISK_FREESPACE_PROCESSING", "8MB")
-          .withEnv("ZEEBE_BROKER_DATA_DISK_FREESPACE_REPLICATION", "1MB");
+          .withEnv("ZEEBE_BROKER_DATA_DISK_FREESPACE_REPLICATION", "1MB")
+          .withEnv("ZEEBE_LOG_LEVEL", "DEBUG");
 
   @SuppressWarnings("JUnitMalformedDeclaration")
   @RegisterExtension
@@ -111,10 +112,14 @@ final class DiskSpaceRecoveryIT {
           .atMost(Duration.ofMinutes(3))
           .pollInterval(1, TimeUnit.MICROSECONDS)
           .untilAsserted(
-              () ->
-                  assertThatThrownBy(DiskSpaceRecoveryIT.this::publishMessage)
-                      .hasRootCauseMessage(
-                          "RESOURCE_EXHAUSTED: Cannot accept requests for partition 1. Broker is out of disk space"));
+              () -> {
+                // Ensure at least one snapshot with a compactable processed position before going
+                // out of disk space
+                partitionsClient.takeSnapshot();
+                assertThatThrownBy(DiskSpaceRecoveryIT.this::publishMessage)
+                    .hasRootCauseMessage(
+                        "RESOURCE_EXHAUSTED: Cannot accept requests for partition 1. Broker is out of disk space");
+              });
 
       // when
       partitionsClient.resumeExporting();

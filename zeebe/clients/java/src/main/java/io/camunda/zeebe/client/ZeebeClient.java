@@ -16,8 +16,10 @@
 package io.camunda.zeebe.client;
 
 import io.camunda.zeebe.client.api.ExperimentalApi;
+import io.camunda.zeebe.client.api.command.AssignUserTaskCommandStep1;
 import io.camunda.zeebe.client.api.command.BroadcastSignalCommandStep1;
 import io.camunda.zeebe.client.api.command.CancelProcessInstanceCommandStep1;
+import io.camunda.zeebe.client.api.command.CompleteUserTaskCommandStep1;
 import io.camunda.zeebe.client.api.command.CreateProcessInstanceCommandStep1;
 import io.camunda.zeebe.client.api.command.DeleteResourceCommandStep1;
 import io.camunda.zeebe.client.api.command.DeployProcessCommandStep1;
@@ -29,8 +31,10 @@ import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1;
 import io.camunda.zeebe.client.api.command.ResolveIncidentCommandStep1;
 import io.camunda.zeebe.client.api.command.SetVariablesCommandStep1;
 import io.camunda.zeebe.client.api.command.TopologyRequestStep1;
+import io.camunda.zeebe.client.api.command.UnassignUserTaskCommandStep1;
 import io.camunda.zeebe.client.api.command.UpdateRetriesJobCommandStep1;
 import io.camunda.zeebe.client.api.command.UpdateTimeoutJobCommandStep1;
+import io.camunda.zeebe.client.api.command.UpdateUserTaskCommandStep1;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.client.api.worker.JobWorkerBuilderStep1;
@@ -456,4 +460,110 @@ public interface ZeebeClient extends AutoCloseable, JobClient {
    * @return the builder for the command
    */
   DeleteResourceCommandStep1 newDeleteResourceCommand(long resourceKey);
+
+  /**
+   * Command to complete a user task.
+   *
+   * <pre>
+   * long userTaskKey = ..;
+   *
+   * zeebeClient
+   *  .newUserTaskCompleteCommand(userTaskKey)
+   *  .variables(map)
+   *  .send();
+   * </pre>
+   *
+   * <p>If the user task is linked to a process instance then this command will complete the related
+   * activity and continue the flow.
+   *
+   * <p>This command is only sent via REST over HTTP, not via gRPC <br>
+   * <br>
+   *
+   * <p><strong>Experimental: This method is under development, and as such using it may have no
+   * effect on the client builder when called. Until this warning is removed, anything described
+   * below may not yet have taken effect, and the interface and its description are subject to
+   * change.</strong>
+   *
+   * @param userTaskKey the key of the user task
+   * @return a builder for the command
+   */
+  @ExperimentalApi("https://github.com/camunda/zeebe/issues/16166")
+  CompleteUserTaskCommandStep1 newUserTaskCompleteCommand(long userTaskKey);
+
+  /**
+   * Command to assign a user task.
+   *
+   * <pre>
+   * long userTaskKey = ..;
+   *
+   * zeebeClient
+   *  .newUserTaskAssignCommand(userTaskKey)
+   *  .assignee(newAssignee)
+   *  .send();
+   * </pre>
+   *
+   * <p>This command is only sent via REST over HTTP, not via gRPC <br>
+   * <br>
+   *
+   * <p><strong>Experimental: This method is under development, and as such using it may have no
+   * effect on the client builder when called. Until this warning is removed, anything described
+   * below may not yet have taken effect, and the interface and its description are subject to
+   * change.</strong>
+   *
+   * @param userTaskKey the key of the user task
+   * @return a builder for the command
+   */
+  @ExperimentalApi("https://github.com/camunda/zeebe/issues/16166")
+  AssignUserTaskCommandStep1 newUserTaskAssignCommand(long userTaskKey);
+
+  /**
+   * Command to update a user task.
+   *
+   * <pre>
+   * long userTaskKey = ..;
+   *
+   * zeebeClient
+   *  .newUserTaskUpdateCommand(userTaskKey)
+   *  .candidateGroups(newCandidateGroups)
+   *  .send();
+   * </pre>
+   *
+   * <p>This command is only sent via REST over HTTP, not via gRPC <br>
+   * <br>
+   *
+   * <p><strong>Experimental: This method is under development, and as such using it may have no
+   * effect on the client builder when called. Until this warning is removed, anything described
+   * below may not yet have taken effect, and the interface and its description are subject to
+   * change.</strong>
+   *
+   * @param userTaskKey the key of the user task
+   * @return a builder for the command
+   */
+  @ExperimentalApi("https://github.com/camunda/zeebe/issues/16166")
+  UpdateUserTaskCommandStep1 newUserTaskUpdateCommand(long userTaskKey);
+
+  /**
+   * Command to unassign a user task.
+   *
+   * <pre>
+   * long userTaskKey = ..;
+   *
+   * zeebeClient
+   *  .newUserTaskUnassignCommand(userTaskKey)
+   *  .send();
+   * </pre>
+   *
+   * <p>This command is only sent via REST over HTTP, not via gRPC <br>
+   * <br>
+   *
+   * <p><strong>Experimental: This method is under development, and as such using it may have no
+   * effect on the client builder when called. Until this warning is removed, anything described
+   * below may not yet have taken effect, and the interface and its description are subject to
+   * change.</strong>
+   *
+   * @param userTaskKey the key of the user task
+   * @return a builder for the command
+   */
+  @ExperimentalApi("https://github.com/camunda/zeebe/issues/16166")
+  UnassignUserTaskCommandStep1 newUserTaskUnassignCommand(long userTaskKey);
 }

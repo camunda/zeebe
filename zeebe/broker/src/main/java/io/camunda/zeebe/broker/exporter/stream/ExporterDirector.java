@@ -75,7 +75,7 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
   private volatile HealthReport healthReport = HealthReport.healthy(this);
 
   private boolean inExportingPhase;
-  private boolean isPaused;
+  private boolean isHardPaused;
   private ExporterPhase exporterPhase;
   private final PartitionMessagingService partitionMessagingService;
   private final String exporterPositionsTopic;
@@ -83,6 +83,7 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
   private final Duration distributionInterval;
   private ExporterStateDistributionService exporterDistributionService;
   private final int partitionId;
+  private final EventFilter positionsToSkipFilter;
 
   public ExporterDirector(final ExporterDirectorContext context, final boolean shouldPauseOnStart) {
     name = context.getName();
@@ -98,11 +99,12 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
     exportingRetryStrategy = new BackOffRetryStrategy(actor, Duration.ofSeconds(10));
     recordWrapStrategy = new EndlessRetryStrategy(actor);
     zeebeDb = context.getZeebeDb();
-    isPaused = shouldPauseOnStart;
+    isHardPaused = shouldPauseOnStart;
     partitionMessagingService = context.getPartitionMessagingService();
     exporterPositionsTopic = String.format(EXPORTER_STATE_TOPIC_FORMAT, partitionId);
     exporterMode = context.getExporterMode();
     distributionInterval = context.getDistributionInterval();
+    positionsToSkipFilter = context.getPositionsToSkipFilter();
   }
 
   public ActorFuture<Void> startAsync(final ActorSchedulingService actorSchedulingService) {
@@ -113,6 +115,13 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
     return actor.close();
   }
 
+  /**
+   * This method enables us to pause the exporting of records. No records are exported until resume
+   * exporting is invoked.
+   *
+   * <p>If the exporter is soft paused and pauseExporting is called, the exporter will be "hard"
+   * paused.
+   */
   public ActorFuture<Void> pauseExporting() {
     if (actor.isClosed()) {
       // Actor can be closed when there are no exporters. In that case pausing is a no-op.
@@ -122,11 +131,39 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
     }
     return actor.call(
         () -> {
-          isPaused = true;
+          isHardPaused = true;
           exporterPhase = ExporterPhase.PAUSED;
         });
   }
 
+  /**
+   * When the exporter is soft paused, we keep exporting the records without updating the exporter
+   * state. Upon resuming, the exporter is updated with the position and metadata of the last
+   * exported record.
+   *
+   * <p>If the exporter is hard paused and softPauseExporting is called, the exporter will be soft
+   * paused.
+   */
+  public ActorFuture<Void> softPauseExporting() {
+    if (actor.isClosed()) {
+      // Actor can be closed when there are no exporters. In that case pausing is a no-op.
+      // This is safe because the pausing state is persisted and will be applied later if exporters
+      // are added.
+      return CompletableActorFuture.completed(null);
+    }
+    return actor.call(
+        () -> {
+          isHardPaused = false;
+          containers.stream().forEach(ExporterContainer::softPauseExporter);
+          exporterPhase = ExporterPhase.SOFT_PAUSED;
+        });
+  }
+
+  /**
+   * This method enables us to resume the exporting of records after it has been paused. It works
+   * both to resume the "soft pause" state and the "paused" state. Upon resuming, the exporter is
+   * updated with the position and metadata of the last exported record.
+   */
   public ActorFuture<Void> resumeExporting() {
     if (actor.isClosed()) {
       // Actor can be closed when there are no exporters. In that case resuming is a no-op.
@@ -137,7 +174,10 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
 
     return actor.call(
         () -> {
-          isPaused = false;
+          isHardPaused = false;
+          if (exporterPhase == ExporterPhase.SOFT_PAUSED) {
+            containers.stream().forEach(ExporterContainer::undoSoftPauseExporter);
+          }
           exporterPhase = ExporterPhase.EXPORTING;
           if (exporterMode == ExporterMode.ACTIVE) {
             actor.submit(this::readNextEvent);
@@ -280,7 +320,7 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
       container.configureExporter();
     }
 
-    eventFilter = createEventFilter(containers);
+    eventFilter = positionsToSkipFilter.and(createEventFilter(containers));
     LOG.debug("Set event filter for exporters: {}", eventFilter);
   }
 
@@ -336,7 +376,7 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
         throw new IllegalStateException(
             String.format(ERROR_MESSAGE_RECOVER_FROM_SNAPSHOT_FAILED, snapshotPosition, getName()));
       }
-      if (!isPaused) {
+      if (!isHardPaused) {
         exporterPhase = ExporterPhase.EXPORTING;
         actor.submit(this::readNextEvent);
       } else {
@@ -401,7 +441,7 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
   }
 
   private boolean shouldExport() {
-    return isOpened.get() && logStreamReader.hasNext() && !inExportingPhase && !isPaused;
+    return isOpened.get() && logStreamReader.hasNext() && !inExportingPhase && !isHardPaused;
   }
 
   private void exportEvent(final LoggedEvent event) {

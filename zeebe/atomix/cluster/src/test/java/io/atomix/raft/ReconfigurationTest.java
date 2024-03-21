@@ -53,7 +53,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 final class ReconfigurationTest {
   private final SingleThreadContext context = new SingleThreadContext("raft-%d");
-  private final TestRaftProtocolFactory protocolFactory = new TestRaftProtocolFactory(context);
+  private final TestRaftProtocolFactory protocolFactory = new TestRaftProtocolFactory();
   private final List<RaftServer> servers = new LinkedList<>();
 
   @AfterEach
@@ -538,7 +538,7 @@ final class ReconfigurationTest {
       assertThat(m2.leave())
           .describedAs(
               "Should fail to leave because quorum not available for the new configuration")
-          .failsWithin(Duration.ofSeconds(2))
+          .failsWithin(Duration.ofSeconds(10))
           .withThrowableOfType(ExecutionException.class);
     }
 
@@ -653,6 +653,23 @@ final class ReconfigurationTest {
                           Set.of(
                               new DefaultRaftMember(id1, Type.ACTIVE, Instant.now()),
                               new DefaultRaftMember(id2, Type.ACTIVE, Instant.now()))));
+    }
+
+    @Test
+    void shouldForceConfigureIfOnlyOneRemainingMember() {
+      // when
+      m2.shutdown().join();
+      m3.shutdown().join();
+      m4.shutdown().join();
+      m1.forceConfigure(Map.of(id1, Type.ACTIVE)).join();
+
+      // then
+      awaitLeader(m1);
+
+      assertThat(m1.cluster().getMembers())
+          .describedAs("Force configuration should have only one members")
+          .containsExactlyInAnyOrderElementsOf(
+              Set.of(new DefaultRaftMember(id1, Type.ACTIVE, Instant.now())));
     }
 
     @Test

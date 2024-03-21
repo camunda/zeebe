@@ -77,11 +77,14 @@ public final class SubProcessProcessor
         .flatMap(
             ok -> {
               eventSubscriptionBehavior.unsubscribeFromEvents(completing);
-              compensationSubscriptionBehaviour.createCompensationSubscriptionForSubprocess(
-                  element, completing);
+              compensationSubscriptionBehaviour.createCompensationSubscription(element, completing);
               return stateTransitionBehavior.transitionToCompleted(element, completing);
             })
-        .thenDo(completed -> stateTransitionBehavior.takeOutgoingSequenceFlows(element, completed));
+        .thenDo(
+            completed -> {
+              compensationSubscriptionBehaviour.completeCompensationHandler(completed);
+              stateTransitionBehavior.takeOutgoingSequenceFlows(element, completed);
+            });
   }
 
   @Override
@@ -90,6 +93,7 @@ public final class SubProcessProcessor
 
     eventSubscriptionBehavior.unsubscribeFromEvents(terminating);
     incidentBehavior.resolveIncidents(terminating);
+    compensationSubscriptionBehaviour.deleteSubscriptionsOfSubprocess(terminating);
 
     final var noActiveChildInstances = stateTransitionBehavior.terminateChildInstances(terminating);
     if (noActiveChildInstances) {

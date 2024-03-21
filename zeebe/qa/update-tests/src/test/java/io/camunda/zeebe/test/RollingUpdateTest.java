@@ -17,14 +17,18 @@ import io.camunda.zeebe.model.bpmn.BpmnModelInstance;
 import io.camunda.zeebe.qa.util.actuator.PartitionsActuator;
 import io.camunda.zeebe.qa.util.testcontainers.ZeebeTestContainerDefaults;
 import io.camunda.zeebe.test.util.asserts.TopologyAssert;
+import io.camunda.zeebe.test.util.junit.CachedTestResultsExtension;
 import io.camunda.zeebe.test.util.testcontainers.ContainerLogsDumper;
 import io.camunda.zeebe.util.VersionUtil;
 import io.zeebe.containers.ZeebeBrokerNode;
 import io.zeebe.containers.ZeebeGatewayNode;
 import io.zeebe.containers.ZeebeVolume;
 import io.zeebe.containers.cluster.ZeebeCluster;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -35,10 +39,11 @@ import org.agrona.CloseHelper;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.ContainerState;
-import org.testcontainers.containers.Network;
 import org.testcontainers.utility.DockerImageName;
 
 /**
@@ -50,10 +55,6 @@ import org.testcontainers.utility.DockerImageName;
  */
 final class RollingUpdateTest {
 
-  private static final DockerImageName PREVIOUS_VERSION =
-      DockerImageName.parse("camunda/zeebe").withTag(VersionUtil.getPreviousVersion());
-  private static final DockerImageName CURRENT_VERSION =
-      ZeebeTestContainerDefaults.defaultTestImage();
   private static final BpmnModelInstance PROCESS =
       Bpmn.createExecutableProcess("process")
           .startEvent()
@@ -61,19 +62,28 @@ final class RollingUpdateTest {
           .serviceTask("task2", s -> s.zeebeJobType("secondTask"))
           .endEvent()
           .done();
-  private final Network network = Network.newNetwork();
+
+  @SuppressWarnings("unused")
+  @RegisterExtension()
+  private static final CachedTestResultsExtension CACHED_TEST_RESULTS_EXTENSION =
+      new CachedTestResultsExtension(
+          Optional.ofNullable(System.getenv("ZEEBE_CI_CHECK_VERSION_COMPATIBILITY_REPORT"))
+              .map(Path::of)
+              .orElse(null));
+
   private final ZeebeCluster cluster =
       ZeebeCluster.builder()
           .withEmbeddedGateway(true)
           .withBrokersCount(3)
           .withPartitionsCount(1)
           .withReplicationFactor(3)
-          .withNetwork(network)
           .build();
 
   @SuppressWarnings("unused")
   @RegisterExtension
   private final ContainerLogsDumper logsPrinter = new ContainerLogsDumper(cluster::getNodes);
+
+  private final Collection<ZeebeVolume> volumes = new LinkedList<>();
 
   @BeforeEach
   public void setup() {
@@ -83,19 +93,23 @@ final class RollingUpdateTest {
   @AfterEach
   public void tearDown() {
     cluster.stop();
-    CloseHelper.quietClose(network);
+    CloseHelper.closeAll(volumes);
+    volumes.clear();
   }
 
-  @Test
-  void shouldBeAbleToRestartContainerWithNewVersion() {
+  @ParameterizedTest(name = "from {0} to {1}")
+  @MethodSource("io.camunda.zeebe.test.VersionCompatibilityMatrix#auto")
+  void shouldBeAbleToRestartContainerWithNewVersion(final String from, final String to) {
     // given
+    updateAllBrokers(from);
+
     final var index = 0;
     final ZeebeBrokerNode<?> broker = cluster.getBrokers().get(index);
     cluster.start();
 
     // when
     broker.stop();
-    updateBroker(broker);
+    updateBroker(broker, to);
 
     // then
     try (final var client = cluster.newClientBuilder().build()) {
@@ -109,13 +123,15 @@ final class RollingUpdateTest {
       Awaitility.await()
           .atMost(Duration.ofSeconds(120))
           .pollInterval(Duration.ofMillis(100))
-          .untilAsserted(() -> assertTopologyContainsUpdatedBroker(client, index));
+          .untilAsserted(() -> assertTopologyContainsUpdatedBroker(client, index, to));
     }
   }
 
-  @Test
-  void shouldReplicateSnapshotAcrossVersions() {
+  @ParameterizedTest(name = "from {0} to {1}")
+  @MethodSource("io.camunda.zeebe.test.VersionCompatibilityMatrix#auto")
+  void shouldReplicateSnapshotAcrossVersions(final String from, final String to) {
     // given
+    updateAllBrokers(from);
     cluster.start();
 
     // when
@@ -163,12 +179,12 @@ final class RollingUpdateTest {
           .pollInterval(Duration.ofMillis(500))
           .untilAsserted(() -> assertBrokerHasAtLeastOneSnapshot(0));
 
-      updateBroker(broker);
+      updateBroker(broker, to);
       broker.start();
       Awaitility.await("updated broker is added to topology")
           .atMost(Duration.ofSeconds(120))
           .pollInterval(Duration.ofMillis(100))
-          .untilAsserted(() -> assertTopologyContainsUpdatedBroker(client, brokerId));
+          .untilAsserted(() -> assertTopologyContainsUpdatedBroker(client, brokerId, to));
     }
 
     Awaitility.await("until restarted broker has snapshot")
@@ -177,9 +193,11 @@ final class RollingUpdateTest {
         .untilAsserted(() -> assertBrokerHasAtLeastOneSnapshot(brokerId));
   }
 
-  @Test
-  void shouldPerformRollingUpdate() {
+  @ParameterizedTest(name = "from {0} to {1}")
+  @MethodSource("io.camunda.zeebe.test.VersionCompatibilityMatrix#auto")
+  void shouldPerformRollingUpdate(final String from, final String to) {
     // given
+    updateAllBrokers(from);
     cluster.start();
 
     // when
@@ -209,12 +227,12 @@ final class RollingUpdateTest {
             .pollInterval(Duration.ofMillis(100))
             .untilAsserted(() -> assertTopologyDoesNotContainerBroker(client, brokerId));
 
-        updateBroker(broker);
+        updateBroker(broker, to);
         broker.start();
         Awaitility.await("updated broker is added to topology")
             .atMost(Duration.ofSeconds(120))
             .pollInterval(Duration.ofMillis(100))
-            .untilAsserted(() -> assertTopologyContainsUpdatedBroker(client, brokerId));
+            .untilAsserted(() -> assertTopologyContainsUpdatedBroker(client, brokerId, to));
 
         availableGateway = cluster.getGateways().get(String.valueOf(i));
       }
@@ -261,8 +279,18 @@ final class RollingUpdateTest {
     PartitionsActuator.of(node).takeSnapshot();
   }
 
-  private void updateBroker(final ZeebeBrokerNode<?> broker) {
-    broker.setDockerImageName(CURRENT_VERSION.asCanonicalNameString());
+  private void updateAllBrokers(final String version) {
+    cluster.getBrokers().forEach((id, broker) -> updateBroker(broker, version));
+  }
+
+  private void updateBroker(final ZeebeBrokerNode<?> broker, final String version) {
+    if ("CURRENT".equals(version)) {
+      broker.setDockerImageName(
+          ZeebeTestContainerDefaults.defaultTestImage().asCanonicalNameString());
+    } else {
+      broker.setDockerImageName(
+          DockerImageName.parse("camunda/zeebe").withTag(version).asCanonicalNameString());
+    }
   }
 
   private ProcessInstanceEvent createProcessInstance(final ZeebeClient client) {
@@ -284,7 +312,7 @@ final class RollingUpdateTest {
   }
 
   private void assertTopologyContainsUpdatedBroker(
-      final ZeebeClient zeebeClient, final int brokerId) {
+      final ZeebeClient zeebeClient, final int brokerId, final String expectedVersion) {
     final var topology = zeebeClient.newTopologyRequest().send().join();
     TopologyAssert.assertThat(topology)
         .as("the topology contains all the brokers")
@@ -298,7 +326,10 @@ final class RollingUpdateTest {
               assertThat(brokerInfo.getNodeId()).as("the broker's node ID").isEqualTo(brokerId);
               assertThat(brokerInfo.getVersion())
                   .as("the broker's version")
-                  .isEqualTo(VersionUtil.getVersion());
+                  .isEqualTo(
+                      "CURRENT".equals(expectedVersion)
+                          ? VersionUtil.getVersion()
+                          : expectedVersion);
             });
   }
 
@@ -331,8 +362,20 @@ final class RollingUpdateTest {
   }
 
   private void configureBroker(final ZeebeBrokerNode<?> broker) {
+    final var volume =
+        ZeebeVolume.newVolume(
+            cfg -> {
+              // Workaround for
+              // https://github.com/camunda-community-hub/zeebe-test-container/issues/656
+              final var labels = new HashMap<>(cfg.getLabels());
+              labels.put(
+                  DockerClientFactory.TESTCONTAINERS_SESSION_ID_LABEL,
+                  DockerClientFactory.SESSION_ID);
+              return cfg.withLabels(labels);
+            });
+    volumes.add(volume);
     broker
-        .withZeebeData(ZeebeVolume.newVolume())
+        .withZeebeData(volume)
         .withEnv("ZEEBE_BROKER_CLUSTER_MEMBERSHIP_BROADCASTUPDATES", "true")
         .withEnv("ZEEBE_BROKER_CLUSTER_MEMBERSHIP_SYNCINTERVAL", "250ms")
         .withEnv("ZEEBE_BROKER_CLUSTER_MEMBERSHIP_PROBEINTERVAL", "100ms")
@@ -350,6 +393,5 @@ final class RollingUpdateTest {
         // TODO remove after 8.4 release
         .withCreateContainerCmdModifier(
             createContainerCmd -> createContainerCmd.withUser("1001:0"));
-    broker.setDockerImageName(PREVIOUS_VERSION.asCanonicalNameString());
   }
 }

@@ -15,6 +15,7 @@ import static io.camunda.zeebe.test.util.record.RecordingExporter.jobRecords;
 import static io.camunda.zeebe.test.util.record.RecordingExporter.records;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.camunda.zeebe.engine.EngineConfiguration;
 import io.camunda.zeebe.engine.util.EngineRule;
 import io.camunda.zeebe.engine.util.RecordingJobStreamer;
 import io.camunda.zeebe.engine.util.RecordingJobStreamer.RecordingJobStream;
@@ -69,6 +70,7 @@ public class ActivatableJobsPushTest {
   private RecordingJobStream jobStream;
   private String jobType;
   private DirectBuffer worker;
+  private Long timeout;
   private Map<String, Object> variables;
   private final List<Long> activeProcessInstances = new ArrayList<>();
 
@@ -77,11 +79,11 @@ public class ActivatableJobsPushTest {
     jobType = Strings.newRandomValidBpmnId();
     worker = BufferUtil.wrapString("test");
     variables = Map.of("a", "valA", "b", "valB", "c", "valC");
-
+    timeout = 30_000L;
     final var jobActivationProperties =
         new JobActivationPropertiesImpl()
             .setWorker(worker, 0, worker.capacity())
-            .setTimeout(30_000L)
+            .setTimeout(timeout)
             .setTenantIds(List.of(TenantOwned.DEFAULT_TENANT_IDENTIFIER))
             .setFetchVariables(
                 List.of(new StringValue("a"), new StringValue("b"), new StringValue("c")));
@@ -160,7 +162,8 @@ public class ActivatableJobsPushTest {
     // given
     final int activationCount = 2;
     final long jobKey = createJob(jobType, PROCESS_ID, variables);
-    ENGINE.increaseTime(JobTimeoutTrigger.TIME_OUT_POLLING_INTERVAL);
+    ENGINE.increaseTime(
+        Duration.ofMillis(timeout).plus(EngineConfiguration.DEFAULT_JOBS_TIMEOUT_POLLING_INTERVAL));
 
     // when
     // job times out

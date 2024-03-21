@@ -38,7 +38,7 @@ public @interface ConditionalOnManagementContext {
    */
   final class OnManagementContextCondition extends SpringBootCondition {
 
-    private static final String MANAGEMENT_ONLY_BEAN_NAME = "ManagementContextWebServerFactory";
+    static final String MANAGEMENT_ONLY_BEAN_NAME = "ManagementContextWebServerFactory";
 
     @Override
     public ConditionOutcome getMatchOutcome(

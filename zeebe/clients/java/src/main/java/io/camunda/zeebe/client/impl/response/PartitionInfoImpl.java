@@ -18,9 +18,12 @@ package io.camunda.zeebe.client.impl.response;
 import io.camunda.zeebe.client.api.response.PartitionBrokerHealth;
 import io.camunda.zeebe.client.api.response.PartitionBrokerRole;
 import io.camunda.zeebe.client.api.response.PartitionInfo;
+import io.camunda.zeebe.client.protocol.rest.Partition.HealthEnum;
+import io.camunda.zeebe.client.protocol.rest.Partition.RoleEnum;
 import io.camunda.zeebe.gateway.protocol.GatewayOuterClass;
 import io.camunda.zeebe.gateway.protocol.GatewayOuterClass.Partition;
 import java.util.Arrays;
+import java.util.Objects;
 
 public class PartitionInfoImpl implements PartitionInfo {
 
@@ -58,6 +61,40 @@ public class PartitionInfoImpl implements PartitionInfo {
     }
   }
 
+  public PartitionInfoImpl(final io.camunda.zeebe.client.protocol.rest.Partition httpPartition) {
+
+    if (httpPartition.getPartitionId() == null) {
+      throw new RuntimeException("Unexpected missing partition ID. A partition ID is required.");
+    }
+    partitionId = httpPartition.getPartitionId();
+
+    if (httpPartition.getRole() == RoleEnum.LEADER) {
+      role = PartitionBrokerRole.LEADER;
+    } else if (httpPartition.getRole() == RoleEnum.FOLLOWER) {
+      role = PartitionBrokerRole.FOLLOWER;
+    } else if (httpPartition.getRole() == RoleEnum.INACTIVE) {
+      role = PartitionBrokerRole.INACTIVE;
+    } else {
+      throw new RuntimeException(
+          String.format(
+              "Unexpected partition broker role %s, should be one of %s",
+              httpPartition.getRole(), Arrays.toString(PartitionBrokerRole.values())));
+    }
+
+    if (httpPartition.getHealth() == HealthEnum.HEALTHY) {
+      partitionBrokerHealth = PartitionBrokerHealth.HEALTHY;
+    } else if (httpPartition.getHealth() == HealthEnum.UNHEALTHY) {
+      partitionBrokerHealth = PartitionBrokerHealth.UNHEALTHY;
+    } else if (httpPartition.getHealth() == HealthEnum.DEAD) {
+      partitionBrokerHealth = PartitionBrokerHealth.DEAD;
+    } else {
+      throw new RuntimeException(
+          String.format(
+              "Unexpected partition broker health %s, should be one of %s",
+              httpPartition.getHealth(), Arrays.toString(PartitionBrokerHealth.values())));
+    }
+  }
+
   @Override
   public int getPartitionId() {
     return partitionId;
@@ -88,5 +125,26 @@ public class PartitionInfoImpl implements PartitionInfo {
         + ", health="
         + partitionBrokerHealth
         + '}';
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(partitionId, role, partitionBrokerHealth);
+  }
+
+  @Override
+  public boolean equals(final Object o) {
+    if (this == o) {
+      return true;
+    }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final PartitionInfoImpl that = (PartitionInfoImpl) o;
+    return partitionId == that.partitionId
+        && role == that.role
+        && partitionBrokerHealth == that.partitionBrokerHealth;
   }
 }

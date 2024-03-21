@@ -42,7 +42,6 @@ import org.springframework.context.event.ContextClosedEvent;
 public class StandaloneBroker
     implements CommandLineRunner, ApplicationListener<ContextClosedEvent> {
   private static final Logger LOGGER = Loggers.SYSTEM_LOGGER;
-
   private final BrokerConfiguration configuration;
   private final IdentityConfiguration identityConfiguration;
   private final SpringBrokerBridge springBrokerBridge;
@@ -50,6 +49,7 @@ public class StandaloneBroker
   private final AtomixCluster cluster;
   private final BrokerClient brokerClient;
 
+  @Autowired private BrokerShutdownHelper shutdownHelper;
   private Broker broker;
 
   @Autowired
@@ -86,7 +86,15 @@ public class StandaloneBroker
   public void run(final String... args) throws IOException {
     final SystemContext systemContext =
         new SystemContext(
-            configuration.config(), identityConfiguration, actorScheduler, cluster, brokerClient);
+            configuration.shutdownTimeout(),
+            configuration.config(),
+            identityConfiguration,
+            actorScheduler,
+            cluster,
+            brokerClient);
+
+    springBrokerBridge.registerShutdownHelper(
+        errorCode -> shutdownHelper.initiateShutdown(errorCode));
 
     broker = new Broker(systemContext, springBrokerBridge);
     broker.start();

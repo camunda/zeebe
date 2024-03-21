@@ -52,6 +52,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeoutException;
@@ -180,9 +181,11 @@ public class ClusterEndpoint {
   public ResponseEntity<?> scale(
       @PathVariable("resource") final Resource resource,
       @RequestBody final List<Integer> ids,
-      @RequestParam(defaultValue = "false") final boolean dryRun) {
+      @RequestParam(defaultValue = "false") final boolean dryRun,
+      @RequestParam(defaultValue = "false") final boolean force,
+      @RequestParam final Optional<Integer> replicationFactor) {
     return switch (resource) {
-      case brokers -> scaleBrokers(ids, dryRun);
+      case brokers -> scaleBrokers(ids, dryRun, force, replicationFactor);
       case partitions ->
           new ResponseEntity<>("Scaling partitions is not supported", HttpStatusCode.valueOf(501));
       case changes ->
@@ -192,18 +195,23 @@ public class ClusterEndpoint {
     };
   }
 
-  private ResponseEntity<?> scaleBrokers(final List<Integer> ids, final boolean dryRun) {
+  private ResponseEntity<?> scaleBrokers(
+      final List<Integer> ids,
+      final boolean dryRun,
+      final boolean force,
+      final Optional<Integer> replicationFactor) {
     try {
+      final ScaleRequest scaleRequest =
+          new ScaleRequest(
+              ids.stream().map(String::valueOf).map(MemberId::from).collect(Collectors.toSet()),
+              replicationFactor,
+              dryRun);
+      // here we assume, if it force request it is always force scale down. The coordinator will
+      // reject the request if that is not the case.
       final var response =
-          requestSender
-              .scaleMembers(
-                  new ScaleRequest(
-                      ids.stream()
-                          .map(String::valueOf)
-                          .map(MemberId::from)
-                          .collect(Collectors.toSet()),
-                      dryRun))
-              .join();
+          force
+              ? requestSender.forceScaleDown(scaleRequest).join()
+              : requestSender.scaleMembers(scaleRequest).join();
       return mapOperationResponse(response);
     } catch (final Exception error) {
       return mapError(error);

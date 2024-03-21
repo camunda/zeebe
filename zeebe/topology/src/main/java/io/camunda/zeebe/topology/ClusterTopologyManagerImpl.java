@@ -14,12 +14,14 @@ import io.camunda.zeebe.topology.changes.TopologyChangeAppliers;
 import io.camunda.zeebe.topology.metrics.TopologyMetrics;
 import io.camunda.zeebe.topology.metrics.TopologyMetrics.OperationObserver;
 import io.camunda.zeebe.topology.state.ClusterTopology;
+import io.camunda.zeebe.topology.state.MemberState.State;
 import io.camunda.zeebe.topology.state.TopologyChangeOperation;
 import io.camunda.zeebe.util.Either;
 import io.camunda.zeebe.util.ExponentialBackoffRetryDelay;
 import io.camunda.zeebe.util.VisibleForTesting;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import org.slf4j.Logger;
@@ -55,6 +57,7 @@ public final class ClusterTopologyManagerImpl implements ClusterTopologyManager 
   private Consumer<ClusterTopology> topologyGossiper;
   private final ActorFuture<Void> startFuture;
   private TopologyChangeAppliers changeAppliers;
+  private InconsistentTopologyListener onInconsistentTopologyDetected;
   private final MemberId localMemberId;
   // Indicates whether there is a topology change operation in progress on this member.
   private boolean onGoingTopologyChangeOperation = false;
@@ -189,7 +192,17 @@ public final class ClusterTopologyManagerImpl implements ClusterTopologyManager 
                     "Received new topology {}. Updating local topology to {}",
                     receivedTopology,
                     mergedTopology);
+
+                final var oldTopology = persistedClusterTopology.getTopology();
+                final var isConflictingTopology =
+                    isConflictingTopology(mergedTopology, oldTopology);
                 persistedClusterTopology.update(mergedTopology);
+
+                if (isConflictingTopology && onInconsistentTopologyDetected != null) {
+                  onInconsistentTopologyDetected.onInconsistentLocalTopology(
+                      mergedTopology, oldTopology);
+                }
+
                 topologyGossiper.accept(mergedTopology);
                 applyTopologyChangeOperation(mergedTopology);
               }
@@ -201,6 +214,19 @@ public final class ClusterTopologyManagerImpl implements ClusterTopologyManager 
                 error);
           }
         });
+  }
+
+  private boolean isConflictingTopology(
+      final ClusterTopology mergedTopology, final ClusterTopology oldTopology) {
+    if (!mergedTopology.hasMember(localMemberId)
+        && oldTopology.hasMember(localMemberId)
+        && oldTopology.getMember(localMemberId).state() == State.LEFT) {
+      // If the member has left, it's state will be removed from the topology by another member. See
+      // ClusterTopology#advance()
+      return false;
+    }
+    return !Objects.equals(
+        mergedTopology.getMember(localMemberId), oldTopology.getMember(localMemberId));
   }
 
   private boolean shouldApplyTopologyChangeOperation(final ClusterTopology mergedTopology) {
@@ -331,7 +357,15 @@ public final class ClusterTopologyManagerImpl implements ClusterTopologyManager 
         });
   }
 
-  public void removeTopologyChangeAppliers() {
+  void removeTopologyChangeAppliers() {
     executor.run(() -> changeAppliers = null);
+  }
+
+  void registerTopologyChangedListener(final InconsistentTopologyListener listener) {
+    executor.run(() -> onInconsistentTopologyDetected = listener);
+  }
+
+  void removeTopologyChangedListener() {
+    executor.run(() -> onInconsistentTopologyDetected = null);
   }
 }

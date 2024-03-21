@@ -193,7 +193,9 @@ public final class EndEventProcessor implements BpmnElementProcessor<ExecutableE
         final ExecutableEndEvent element, final BpmnElementContext activating) {
       return variableMappingBehavior
           .applyInputMappings(activating, element)
-          .flatMap(ok -> jobBehavior.evaluateJobExpressions(element, activating))
+          .flatMap(
+              ok ->
+                  jobBehavior.evaluateJobExpressions(element.getJobWorkerProperties(), activating))
           .thenDo(
               jobProperties -> {
                 jobBehavior.createNewJob(activating, element, jobProperties);
@@ -337,8 +339,12 @@ public final class EndEventProcessor implements BpmnElementProcessor<ExecutableE
       final var activated =
           stateTransitionBehavior.transitionToActivated(activating, element.getEventType());
 
+      final var compensation = element.getCompensation();
       final var isCompensationTriggered =
-          compensationSubscriptionBehaviour.triggerCompensation(element, activating);
+          compensation.hasReferenceActivity()
+              ? compensationSubscriptionBehaviour.triggerCompensationForActivity(
+                  element, compensation.getReferenceCompensationActivity(), activated)
+              : compensationSubscriptionBehaviour.triggerCompensation(element, activating);
 
       if (isCompensationTriggered) {
         return SUCCESS;

@@ -31,6 +31,7 @@ public final class BrokerTopologyManagerImpl extends Actor
 
   private static final Logger LOG = LoggerFactory.getLogger(BrokerTopologyManagerImpl.class);
   private volatile BrokerClusterStateImpl topology = new BrokerClusterStateImpl();
+  private volatile ClusterTopology clusterTopology = ClusterTopology.uninitialized();
   private final Supplier<Set<Member>> membersSupplier;
   private final BrokerClientTopologyMetrics topologyMetrics = new BrokerClientTopologyMetrics();
 
@@ -46,6 +47,11 @@ public final class BrokerTopologyManagerImpl extends Actor
   @Override
   public BrokerClusterState getTopology() {
     return topology;
+  }
+
+  @Override
+  public ClusterTopology getClusterTopology() {
+    return clusterTopology;
   }
 
   @Override
@@ -160,8 +166,8 @@ public final class BrokerTopologyManagerImpl extends Actor
     if (topology.getClusterSize() == BrokerClusterStateImpl.UNINITIALIZED_CLUSTER_SIZE) {
       topology.setClusterSize(distributedBrokerInfo.getClusterSize());
       topology.setPartitionsCount(distributedBrokerInfo.getPartitionsCount());
+      topology.setReplicationFactor(distributedBrokerInfo.getReplicationFactor());
     }
-    topology.setReplicationFactor(distributedBrokerInfo.getReplicationFactor());
 
     final int nodeId = distributedBrokerInfo.getNodeId();
 
@@ -204,11 +210,25 @@ public final class BrokerTopologyManagerImpl extends Actor
     if (clusterTopology.isUninitialized()) {
       return;
     }
-    LOG.debug("Received new cluster topology with clusterSize {}", clusterTopology.clusterSize());
+    this.clusterTopology = clusterTopology;
+
     updateTopology(
-        topology -> {
-          topology.setClusterSize(clusterTopology.clusterSize());
-          topology.setPartitionsCount(clusterTopology.partitionCount());
+        topologyToUpdate -> {
+          final var newClusterSize = clusterTopology.clusterSize();
+          final var newPartitionsCount = clusterTopology.partitionCount();
+          final var newReplicationFactor = clusterTopology.minReplicationFactor();
+          if (newClusterSize != topologyToUpdate.getClusterSize()
+              || newPartitionsCount != topologyToUpdate.getPartitionsCount()
+              || newReplicationFactor != topologyToUpdate.getReplicationFactor()) {
+            LOG.debug(
+                "Updating topology with clusterSize {}, partitionsCount {} and replicationFactor {}",
+                newClusterSize,
+                newPartitionsCount,
+                newReplicationFactor);
+            topologyToUpdate.setClusterSize(newClusterSize);
+            topologyToUpdate.setPartitionsCount(newPartitionsCount);
+            topologyToUpdate.setReplicationFactor(newReplicationFactor);
+          }
         });
   }
 }

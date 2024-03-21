@@ -54,9 +54,14 @@ public final class JobWorkerTaskProcessor implements BpmnElementProcessor<Execut
   @Override
   public Either<Failure, ?> onActivate(
       final ExecutableJobWorkerTask element, final BpmnElementContext context) {
-    return variableMappingBehavior
-        .applyInputMappings(context, element)
-        .flatMap(ok -> jobBehavior.evaluateJobExpressions(element, context))
+    return variableMappingBehavior.applyInputMappings(context, element);
+  }
+
+  @Override
+  public Either<Failure, ?> finalizeActivation(
+      final ExecutableJobWorkerTask element, final BpmnElementContext context) {
+    return jobBehavior
+        .evaluateJobExpressions(element.getJobWorkerProperties(), context)
         .flatMap(j -> eventSubscriptionBehavior.subscribeToEvents(element, context).map(ok -> j))
         .thenDo(
             jobProperties -> {
@@ -70,15 +75,18 @@ public final class JobWorkerTaskProcessor implements BpmnElementProcessor<Execut
       final ExecutableJobWorkerTask element, final BpmnElementContext context) {
     return variableMappingBehavior
         .applyOutputMappings(context, element)
-        .flatMap(
-            ok -> {
-              eventSubscriptionBehavior.unsubscribeFromEvents(context);
-              compensationSubscriptionBehaviour.createCompensationSubscription(element, context);
-              return stateTransitionBehavior.transitionToCompleted(element, context);
-            })
+        .thenDo(ok -> eventSubscriptionBehavior.unsubscribeFromEvents(context));
+  }
+
+  @Override
+  public Either<Failure, ?> finalizeCompletion(
+      final ExecutableJobWorkerTask element, final BpmnElementContext context) {
+    compensationSubscriptionBehaviour.createCompensationSubscription(element, context);
+    return stateTransitionBehavior
+        .transitionToCompleted(element, context)
         .thenDo(
             completed -> {
-              compensationSubscriptionBehaviour.completeCompensationHandler(context, element);
+              compensationSubscriptionBehaviour.completeCompensationHandler(completed);
               stateTransitionBehavior.takeOutgoingSequenceFlows(element, completed);
             });
   }

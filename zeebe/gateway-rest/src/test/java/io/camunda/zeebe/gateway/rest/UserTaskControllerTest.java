@@ -26,6 +26,8 @@ import io.camunda.zeebe.protocol.record.Assertions;
 import io.camunda.zeebe.protocol.record.RejectionType;
 import io.camunda.zeebe.protocol.record.intent.UserTaskIntent;
 import java.net.URI;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +55,11 @@ import reactor.core.publisher.Mono;
     webEnvironment = WebEnvironment.RANDOM_PORT)
 public class UserTaskControllerTest {
 
+  private static final String USER_TASKS_BASE_URL = "v1/user-tasks";
+
+  private static final String TEST_TIME =
+      ZonedDateTime.of(2023, 11, 11, 11, 11, 11, 11, ZoneId.of("UTC")).toString();
+
   @MockBean BrokerClient brokerClient;
   Supplier<CompletableFuture<BrokerResponse<Object>>> brokerResponseFutureSupplier;
 
@@ -71,7 +78,7 @@ public class UserTaskControllerTest {
     // when / then
     webClient
         .post()
-        .uri("api/v1/user-tasks/2251799813685732/completion")
+        .uri(USER_TASKS_BASE_URL + "/2251799813685732/completion")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .exchange()
@@ -96,7 +103,7 @@ public class UserTaskControllerTest {
     // when / then
     webClient
         .post()
-        .uri("api/v1/user-tasks/1/completion")
+        .uri(USER_TASKS_BASE_URL + "/1/completion")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskCompletionRequest.class)
@@ -123,7 +130,7 @@ public class UserTaskControllerTest {
     // when / then
     webClient
         .post()
-        .uri("api/v1/user-tasks/1/completion")
+        .uri(USER_TASKS_BASE_URL + "/1/completion")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskCompletionRequest.class)
@@ -152,7 +159,7 @@ public class UserTaskControllerTest {
     // when / then
     webClient
         .post()
-        .uri("api/v1/user-tasks/1/completion")
+        .uri(USER_TASKS_BASE_URL + "/1/completion")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskCompletionRequest.class)
@@ -177,7 +184,7 @@ public class UserTaskControllerTest {
     // when / then
     webClient
         .patch()
-        .uri("api/v1/user-tasks/1")
+        .uri(USER_TASKS_BASE_URL + "/1")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskUpdateRequest.class)
@@ -208,13 +215,13 @@ public class UserTaskControllerTest {
                 new Changeset()
                     .addCandidateGroupsItem("foo")
                     .addCandidateUsersItem("bar")
-                    .dueDate("abc")
-                    .followUpDate("def"));
+                    .dueDate(TEST_TIME)
+                    .followUpDate(TEST_TIME));
 
     // when / then
     webClient
         .patch()
-        .uri("api/v1/user-tasks/1")
+        .uri(USER_TASKS_BASE_URL + "/1")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskUpdateRequest.class)
@@ -234,8 +241,8 @@ public class UserTaskControllerTest {
             UserTaskRecord.CANDIDATE_GROUPS,
             UserTaskRecord.DUE_DATE,
             UserTaskRecord.FOLLOW_UP_DATE)
-        .hasDueDate("abc")
-        .hasFollowUpDate("def")
+        .hasDueDate(TEST_TIME)
+        .hasFollowUpDate(TEST_TIME)
         .hasCandidateGroupsList("foo")
         .hasCandidateUsersList("bar");
   }
@@ -245,12 +252,12 @@ public class UserTaskControllerTest {
     // given
     final var request =
         new UserTaskUpdateRequest()
-            .changeset(new Changeset().addCandidateGroupsItem("foo").followUpDate("def"));
+            .changeset(new Changeset().addCandidateGroupsItem("foo").followUpDate(TEST_TIME));
 
     // when / then
     webClient
         .patch()
-        .uri("api/v1/user-tasks/1")
+        .uri(USER_TASKS_BASE_URL + "/1")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskUpdateRequest.class)
@@ -267,7 +274,7 @@ public class UserTaskControllerTest {
         .hasAction("")
         .hasChangedAttributes(UserTaskRecord.CANDIDATE_GROUPS, UserTaskRecord.FOLLOW_UP_DATE)
         .hasDueDate("")
-        .hasFollowUpDate("def")
+        .hasFollowUpDate(TEST_TIME)
         .hasCandidateGroupsList("foo")
         .hasNoCandidateUsersList();
   }
@@ -277,12 +284,14 @@ public class UserTaskControllerTest {
     // when / then
     webClient
         .patch()
-        .uri("api/v1/user-tasks/1")
+        .uri(USER_TASKS_BASE_URL + "/1")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(
             BodyInserters.fromValue(
-                "{\"changeset\": { \"followUpDate\": \"def\", \"candidateGroups\": [\"foo\"]}}"))
+                "{\"changeset\": { \"followUpDate\": \""
+                    + TEST_TIME
+                    + "\", \"candidateGroups\": [\"foo\"]}}"))
         .exchange()
         .expectStatus()
         .isNoContent()
@@ -296,7 +305,7 @@ public class UserTaskControllerTest {
         .hasAction("")
         .hasChangedAttributes(UserTaskRecord.CANDIDATE_GROUPS, UserTaskRecord.FOLLOW_UP_DATE)
         .hasDueDate("")
-        .hasFollowUpDate("def")
+        .hasFollowUpDate(TEST_TIME)
         .hasCandidateGroupsList("foo")
         .hasNoCandidateUsersList();
   }
@@ -311,7 +320,7 @@ public class UserTaskControllerTest {
     // when / then
     webClient
         .patch()
-        .uri("api/v1/user-tasks/1")
+        .uri(USER_TASKS_BASE_URL + "/1")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskUpdateRequest.class)
@@ -338,7 +347,7 @@ public class UserTaskControllerTest {
     // when / then
     webClient
         .patch()
-        .uri("api/v1/user-tasks/1")
+        .uri(USER_TASKS_BASE_URL + "/1")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(
@@ -372,13 +381,13 @@ public class UserTaskControllerTest {
                 new Changeset()
                     .addCandidateGroupsItem("foo")
                     .addCandidateUsersItem("bar")
-                    .dueDate("abc")
-                    .followUpDate("def"));
+                    .dueDate(TEST_TIME)
+                    .followUpDate(TEST_TIME));
 
     // when / then
     webClient
         .patch()
-        .uri("api/v1/user-tasks/1")
+        .uri(USER_TASKS_BASE_URL + "/1")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskUpdateRequest.class)
@@ -398,8 +407,8 @@ public class UserTaskControllerTest {
             UserTaskRecord.CANDIDATE_GROUPS,
             UserTaskRecord.DUE_DATE,
             UserTaskRecord.FOLLOW_UP_DATE)
-        .hasDueDate("abc")
-        .hasFollowUpDate("def")
+        .hasDueDate(TEST_TIME)
+        .hasFollowUpDate(TEST_TIME)
         .hasCandidateGroupsList("foo")
         .hasCandidateUsersList("bar");
   }
@@ -413,17 +422,111 @@ public class UserTaskControllerTest {
             "No update data provided. Provide at least an \"action\" or a non-null value "
                 + "for a supported attribute in the \"changeset\".");
     expectedBody.setTitle("INVALID_ARGUMENT");
-    expectedBody.setInstance(URI.create("/api/v1/user-tasks/1"));
+    expectedBody.setInstance(URI.create("/" + USER_TASKS_BASE_URL + "/1"));
 
     // when / then
     webClient
         .patch()
-        .uri("api/v1/user-tasks/1")
+        .uri(USER_TASKS_BASE_URL + "/1")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .exchange()
         .expectStatus()
         .isBadRequest()
+        .expectHeader()
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+        .expectBody(ProblemDetail.class)
+        .isEqualTo(expectedBody);
+
+    Mockito.verifyNoInteractions(brokerClient);
+  }
+
+  @Test
+  public void shouldYieldBadRequestWhenUpdateTaskWithoutMalformedDueDate() {
+    // given
+    final var request = new UserTaskUpdateRequest().changeset(new Changeset().dueDate("foo"));
+
+    final var expectedBody =
+        ProblemDetail.forStatusAndDetail(
+            HttpStatus.BAD_REQUEST,
+            "The provided due date 'foo' cannot be parsed as a date according to RFC 3339, section 5.6.");
+    expectedBody.setTitle("INVALID_ARGUMENT");
+    expectedBody.setInstance(URI.create("/" + USER_TASKS_BASE_URL + "/1"));
+
+    // when / then
+    webClient
+        .patch()
+        .uri(USER_TASKS_BASE_URL + "/1")
+        .accept(MediaType.APPLICATION_JSON)
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(Mono.just(request), UserTaskUpdateRequest.class)
+        .exchange()
+        .expectStatus()
+        .isBadRequest()
+        .expectHeader()
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+        .expectBody(ProblemDetail.class)
+        .isEqualTo(expectedBody);
+
+    Mockito.verifyNoInteractions(brokerClient);
+  }
+
+  @Test
+  public void shouldYieldBadRequestWhenUpdateTaskWithMalformedFollowUpDate() {
+    // given
+    final var request = new UserTaskUpdateRequest().changeset(new Changeset().followUpDate("foo"));
+
+    final var expectedBody =
+        ProblemDetail.forStatusAndDetail(
+            HttpStatus.BAD_REQUEST,
+            "The provided follow-up date 'foo' cannot be parsed as a date according to RFC 3339, section 5.6.");
+    expectedBody.setTitle("INVALID_ARGUMENT");
+    expectedBody.setInstance(URI.create("/" + USER_TASKS_BASE_URL + "/1"));
+
+    // when / then
+    webClient
+        .patch()
+        .uri(USER_TASKS_BASE_URL + "/1")
+        .accept(MediaType.APPLICATION_JSON)
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(Mono.just(request), UserTaskUpdateRequest.class)
+        .exchange()
+        .expectStatus()
+        .isBadRequest()
+        .expectHeader()
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+        .expectBody(ProblemDetail.class)
+        .isEqualTo(expectedBody);
+
+    Mockito.verifyNoInteractions(brokerClient);
+  }
+
+  @Test
+  public void shouldYieldBadRequestWhenUpdateTaskWithoutMalformedFollowUpAndDueDate() {
+    // given
+    final var request =
+        new UserTaskUpdateRequest().changeset(new Changeset().dueDate("bar").followUpDate("foo"));
+
+    final var expectedBody =
+        ProblemDetail.forStatusAndDetail(
+            HttpStatus.BAD_REQUEST,
+            "The provided due date 'bar' cannot be parsed as a date according to RFC 3339, section 5.6. "
+                + "The provided follow-up date 'foo' cannot be parsed as a date according to RFC 3339, section 5.6.");
+    expectedBody.setTitle("INVALID_ARGUMENT");
+    expectedBody.setInstance(URI.create("/" + USER_TASKS_BASE_URL + "/1"));
+
+    // when / then
+    webClient
+        .patch()
+        .uri(USER_TASKS_BASE_URL + "/1")
+        .accept(MediaType.APPLICATION_JSON)
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(Mono.just(request), UserTaskUpdateRequest.class)
+        .exchange()
+        .expectStatus()
+        .isBadRequest()
+        .expectHeader()
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
         .expectBody(ProblemDetail.class)
         .isEqualTo(expectedBody);
 
@@ -443,18 +546,20 @@ public class UserTaskControllerTest {
             "No update data provided. Provide at least an \"action\" or a non-null value "
                 + "for a supported attribute in the \"changeset\".");
     expectedBody.setTitle("INVALID_ARGUMENT");
-    expectedBody.setInstance(URI.create("/api/v1/user-tasks/1"));
+    expectedBody.setInstance(URI.create("/" + USER_TASKS_BASE_URL + "/1"));
 
     // when / then
     webClient
         .patch()
-        .uri("api/v1/user-tasks/1")
+        .uri(USER_TASKS_BASE_URL + "/1")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskUpdateRequest.class)
         .exchange()
         .expectStatus()
         .isBadRequest()
+        .expectHeader()
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
         .expectBody(ProblemDetail.class)
         .isEqualTo(expectedBody);
 
@@ -470,18 +575,20 @@ public class UserTaskControllerTest {
             "No update data provided. Provide at least an \"action\" or a non-null value "
                 + "for a supported attribute in the \"changeset\".");
     expectedBody.setTitle("INVALID_ARGUMENT");
-    expectedBody.setInstance(URI.create("/api/v1/user-tasks/1"));
+    expectedBody.setInstance(URI.create("/" + USER_TASKS_BASE_URL + "/1"));
 
     // when / then
     webClient
         .patch()
-        .uri("api/v1/user-tasks/1")
+        .uri(USER_TASKS_BASE_URL + "/1")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(BodyInserters.fromValue("{ \"changeset\": {\"elementInstanceKey\": 123456}}"))
         .exchange()
         .expectStatus()
         .isBadRequest()
+        .expectHeader()
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
         .expectBody(ProblemDetail.class)
         .isEqualTo(expectedBody);
 
@@ -508,18 +615,20 @@ public class UserTaskControllerTest {
             HttpStatus.NOT_FOUND,
             "Command 'COMPLETE' rejected with code 'NOT_FOUND': Task not found");
     expectedBody.setTitle("NOT_FOUND");
-    expectedBody.setInstance(URI.create("/api/v1/user-tasks/1/completion"));
+    expectedBody.setInstance(URI.create("/" + USER_TASKS_BASE_URL + "/1/completion"));
 
     // when / then
     webClient
         .post()
-        .uri("api/v1/user-tasks/1/completion")
+        .uri(USER_TASKS_BASE_URL + "/1/completion")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskCompletionRequest.class)
         .exchange()
         .expectStatus()
         .isNotFound()
+        .expectHeader()
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
         .expectBody(ProblemDetail.class)
         .isEqualTo(expectedBody);
 
@@ -551,18 +660,20 @@ public class UserTaskControllerTest {
             HttpStatus.CONFLICT,
             "Command 'COMPLETE' rejected with code 'INVALID_STATE': Task is not in state CREATED");
     expectedBody.setTitle("INVALID_STATE");
-    expectedBody.setInstance(URI.create("/api/v1/user-tasks/1/completion"));
+    expectedBody.setInstance(URI.create("/" + USER_TASKS_BASE_URL + "/1/completion"));
 
     // when / then
     webClient
         .post()
-        .uri("api/v1/user-tasks/1/completion")
+        .uri(USER_TASKS_BASE_URL + "/1/completion")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskCompletionRequest.class)
         .exchange()
         .expectStatus()
         .isEqualTo(HttpStatus.CONFLICT)
+        .expectHeader()
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
         .expectBody(ProblemDetail.class)
         .isEqualTo(expectedBody);
 
@@ -594,18 +705,20 @@ public class UserTaskControllerTest {
             HttpStatus.BAD_REQUEST,
             "Command 'COMPLETE' rejected with code '" + rejectionType + "': Just an error");
     expectedBody.setTitle(rejectionType.name());
-    expectedBody.setInstance(URI.create("/api/v1/user-tasks/1/completion"));
+    expectedBody.setInstance(URI.create("/" + USER_TASKS_BASE_URL + "/1/completion"));
 
     // when / then
     webClient
         .post()
-        .uri("api/v1/user-tasks/1/completion")
+        .uri(USER_TASKS_BASE_URL + "/1/completion")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskCompletionRequest.class)
         .exchange()
         .expectStatus()
         .isBadRequest()
+        .expectHeader()
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
         .expectBody(ProblemDetail.class)
         .isEqualTo(expectedBody);
 
@@ -637,18 +750,20 @@ public class UserTaskControllerTest {
             HttpStatus.INTERNAL_SERVER_ERROR,
             "Command 'COMPLETE' rejected with code '" + rejectionType + "': Just an error");
     expectedBody.setTitle(rejectionType.name());
-    expectedBody.setInstance(URI.create("/api/v1/user-tasks/1/completion"));
+    expectedBody.setInstance(URI.create("/" + USER_TASKS_BASE_URL + "/1/completion"));
 
     // when / then
     webClient
         .post()
-        .uri("api/v1/user-tasks/1/completion")
+        .uri(USER_TASKS_BASE_URL + "/1/completion")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskCompletionRequest.class)
         .exchange()
         .expectStatus()
         .is5xxServerError()
+        .expectHeader()
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
         .expectBody(ProblemDetail.class)
         .isEqualTo(expectedBody);
 
@@ -667,7 +782,7 @@ public class UserTaskControllerTest {
 
     webClient
         .post()
-        .uri("api/v1/user-tasks/2251799813685732/assignment")
+        .uri(USER_TASKS_BASE_URL + "/2251799813685732/assignment")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskAssignmentRequest.class)
@@ -695,7 +810,7 @@ public class UserTaskControllerTest {
 
     webClient
         .post()
-        .uri("api/v1/user-tasks/2251799813685732/assignment")
+        .uri(USER_TASKS_BASE_URL + "/2251799813685732/assignment")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskAssignmentRequest.class)
@@ -726,7 +841,7 @@ public class UserTaskControllerTest {
 
     webClient
         .post()
-        .uri("api/v1/user-tasks/2251799813685732/assignment")
+        .uri(USER_TASKS_BASE_URL + "/2251799813685732/assignment")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskAssignmentRequest.class)
@@ -757,7 +872,7 @@ public class UserTaskControllerTest {
 
     webClient
         .post()
-        .uri("api/v1/user-tasks/2251799813685732/assignment")
+        .uri(USER_TASKS_BASE_URL + "/2251799813685732/assignment")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskAssignmentRequest.class)
@@ -785,7 +900,7 @@ public class UserTaskControllerTest {
 
     webClient
         .post()
-        .uri("api/v1/user-tasks/2251799813685732/assignment")
+        .uri(USER_TASKS_BASE_URL + "/2251799813685732/assignment")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskAssignmentRequest.class)
@@ -813,7 +928,7 @@ public class UserTaskControllerTest {
 
     webClient
         .post()
-        .uri("api/v1/user-tasks/2251799813685732/assignment")
+        .uri(USER_TASKS_BASE_URL + "/2251799813685732/assignment")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskAssignmentRequest.class)
@@ -841,18 +956,20 @@ public class UserTaskControllerTest {
     final var expectedBody =
         ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "No assignee provided");
     expectedBody.setTitle("INVALID_ARGUMENT");
-    expectedBody.setInstance(URI.create("/api/v1/user-tasks/1/assignment"));
+    expectedBody.setInstance(URI.create("/" + USER_TASKS_BASE_URL + "/1/assignment"));
 
     // when / then
     webClient
         .post()
-        .uri("api/v1/user-tasks/1/assignment")
+        .uri(USER_TASKS_BASE_URL + "/1/assignment")
         .accept(MediaType.APPLICATION_JSON)
         .contentType(MediaType.APPLICATION_JSON)
         .body(Mono.just(request), UserTaskAssignmentRequest.class)
         .exchange()
         .expectStatus()
         .isBadRequest()
+        .expectHeader()
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
         .expectBody(ProblemDetail.class)
         .isEqualTo(expectedBody);
 
@@ -864,7 +981,7 @@ public class UserTaskControllerTest {
     // when / then
     webClient
         .delete()
-        .uri("api/v1/user-tasks/2251799813685732/assignee")
+        .uri(USER_TASKS_BASE_URL + "/2251799813685732/assignee")
         .exchange()
         .expectStatus()
         .isNoContent()
