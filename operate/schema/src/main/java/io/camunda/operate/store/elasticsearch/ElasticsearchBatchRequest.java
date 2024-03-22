@@ -203,7 +203,7 @@ public class ElasticsearchBatchRequest implements BatchRequest {
     } catch (final JsonProcessingException e) {
       throw new PersistenceException(
           String.format(
-              "Error preparing the query to upsert [%s] of entity type [%s] with routing",
+              "Error preparing the query to upsert [%s] of entity type [%s] with script and routing",
               entity.getClass().getName(), entity),
           e);
     }

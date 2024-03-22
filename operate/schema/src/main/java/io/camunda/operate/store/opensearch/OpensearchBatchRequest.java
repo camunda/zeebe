@@ -156,7 +156,33 @@ public class OpensearchBatchRequest implements BatchRequest {
       final Map<String, Object> parameters,
       final String routing)
       throws PersistenceException {
-    throw new UnsupportedOperationException("Not yet implemented");
+    LOGGER.debug(
+        "Add upsert request with routing {} for index {} id {} entity {} and script {} with parameters {} ",
+        routing,
+        index,
+        id,
+        entity,
+        script,
+        parameters);
+    withPersistenceException(
+        () ->
+            bulkRequestBuilder.operations(
+                op ->
+                    op.update(
+                        upd ->
+                            upd.index(index)
+                                .id(id)
+                                .upsert(entity)
+                                .script(script(script, parameters))
+                                .routing(routing)
+                                .retryOnConflict(UPDATE_RETRY_COUNT))),
+        String.format(
+            String.format(
+                "Error preparing the query to upsert [%s] of entity type [%s] with script and routing",
+                entity.getClass().getName(), entity),
+            index,
+            id));
+    return this;
   }
 
   @Override
