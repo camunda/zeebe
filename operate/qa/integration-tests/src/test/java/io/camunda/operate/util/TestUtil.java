@@ -222,6 +222,7 @@ public abstract class TestUtil {
     activityInstanceEntity.setProcessInstanceKey(processInstanceKey);
     final Long activityInstanceId = RANDOM.nextLong();
     activityInstanceEntity.setId(activityInstanceId.toString());
+    activityInstanceEntity.setKey(activityInstanceId);
     activityInstanceEntity.setActivityId(activityId);
     activityInstanceEntity.setActivityType(activityType);
     activityInstanceEntity.setActivityState(state);
@@ -413,10 +414,16 @@ public abstract class TestUtil {
     return result;
   }
 
+  public static VariableForListViewEntity createVariableForListView(final Long processInstanceKey) {
+    final String name = UUID.randomUUID().toString();
+    final String value = UUID.randomUUID().toString();
+    return createVariableForListView(processInstanceKey, processInstanceKey, name, value);
+  }
+
   public static VariableForListViewEntity createVariableForListView(
       final Long processInstanceKey, final Long scopeKey, final String name, final String value) {
     final VariableForListViewEntity variable = new VariableForListViewEntity();
-    variable.setId(scopeKey + "_" + name);
+    variable.setId(VariableForListViewEntity.getIdBy(scopeKey, name));
     variable.setProcessInstanceKey(processInstanceKey);
     variable.setScopeKey(scopeKey);
     variable.setVarName(name);
