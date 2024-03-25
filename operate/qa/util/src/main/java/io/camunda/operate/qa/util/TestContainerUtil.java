@@ -93,6 +93,14 @@ public class TestContainerUtil {
   private static final Integer OPERATE_HTTP_PORT = 8080;
   private static final String DOCKER_ELASTICSEARCH_IMAGE_NAME =
       "docker.elastic.co/elasticsearch/elasticsearch";
+  // There are two cases how we start containers:
+  // 1. We start both Elasticsearch and Zeebe as test containers. This way TestContext object stores
+  // the names and ports of running containers, and we configure Zeebe with that values.
+  // 2. Elasticsearch is started independently on the same "host" machine, but Zeebe is run from
+  // test containers and need to connect to that external Elasticsearch instance. We do this by
+  // using "Exposing host port" feature of test containers:
+  // https://java.testcontainers.org/features/networking/#exposing-host-ports-to-the-container
+  // Currently we consider that external Elastic is running on 9200 port.
   private static final String ELS_DOCKER_TESTCONTAINER_URL_DEFAULT =
       "http://host.testcontainers.internal:9200";
   private static final String ZEEBE = "zeebe";
