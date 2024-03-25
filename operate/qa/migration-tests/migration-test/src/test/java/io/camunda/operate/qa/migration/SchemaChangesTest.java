@@ -44,9 +44,29 @@ public class SchemaChangesTest extends AbstractMigrationTest {
     final List<IndexChange> expectedIndexChanges =
         Arrays.asList(
             IndexChange.forVersionAndIndex("8.5", listViewTemplate.getDerivedIndexNamePattern())
-                .withAddedProperty("position", "long"),
+                .withAddedProperty("position", "long")
+                .withAddedProperty(
+                    "auxPositions",
+                    Map.of(
+                        "enabled",
+                        false,
+                        "properties",
+                        Map.of("incident", Map.of("type", "long"), "job", Map.of("type", "long")))),
             IndexChange.forVersionAndIndex("8.5", eventTemplate.getDerivedIndexNamePattern())
-                .withAddedProperty("position", "long"),
+                .withAddedProperty("position", "long")
+                .withAddedProperty(
+                    "auxPositions",
+                    Map.of(
+                        "enabled",
+                        false,
+                        "properties",
+                        Map.of(
+                            "processMessageSubscription",
+                            Map.of("type", "long"),
+                            "incident",
+                            Map.of("type", "long"),
+                            "job",
+                            Map.of("type", "long")))),
             IndexChange.forVersionAndIndex("8.5", incidentTemplate.getDerivedIndexNamePattern())
                 .withAddedProperty("position", "long"),
             IndexChange.forVersionAndIndex("8.5", variableTemplate.getDerivedIndexNamePattern())
@@ -114,6 +134,15 @@ public class SchemaChangesTest extends AbstractMigrationTest {
       addedProperty.setTypeDefinition(Map.of("type", type));
       addedProperties.add(addedProperty);
 
+      return this;
+    }
+
+    protected IndexChange withAddedProperty(
+        final String name, final Map<String, Object> typeDefinition) {
+      final IndexMappingProperty addedProperty = new IndexMappingProperty();
+      addedProperty.setName(name);
+      addedProperty.setTypeDefinition(typeDefinition);
+      addedProperties.add(addedProperty);
       return this;
     }
 

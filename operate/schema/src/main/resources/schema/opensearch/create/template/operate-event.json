@@ -78,6 +78,20 @@
       },
       "position": {
         "type": "long"
+      },
+      "auxPositions": {
+        "enabled": false,
+        "properties": {
+          "processMessageSubscription": {
+            "type": "long"
+          },
+          "job": {
+            "type": "long"
+          },
+          "incident": {
+            "type": "long"
+          }
+        }
       }
 		}
 	}
