@@ -129,16 +129,13 @@
       "position": {
         "type": "long"
       },
-      "auxPositions": {
-        "enabled": false,
-        "properties": {
-          "incident": {
-            "type": "long"
-          },
-          "job": {
-            "type": "long"
-          }
-        }
+      "positionIncident": {
+        "type": "long",
+        "index": false
+      },
+      "positionJob": {
+        "type": "long",
+        "index": false
       }
 		}
 	}

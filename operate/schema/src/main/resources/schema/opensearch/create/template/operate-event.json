@@ -79,19 +79,17 @@
       "position": {
         "type": "long"
       },
-      "auxPositions": {
-        "enabled": false,
-        "properties": {
-          "processMessageSubscription": {
-            "type": "long"
-          },
-          "job": {
-            "type": "long"
-          },
-          "incident": {
-            "type": "long"
-          }
-        }
+      "positionIncident": {
+        "type": "long",
+        "index": false
+      },
+      "positionProcessMessageSubscription": {
+        "type": "long",
+        "index": false
+      },
+      "positionJob": {
+        "type": "long",
+        "index": false
       }
 		}
 	}
