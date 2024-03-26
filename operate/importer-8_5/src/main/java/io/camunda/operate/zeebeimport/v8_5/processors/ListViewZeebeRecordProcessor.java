@@ -22,7 +22,9 @@ import static io.camunda.operate.schema.templates.ListViewTemplate.ACTIVITY_TYPE
 import static io.camunda.operate.schema.templates.ListViewTemplate.BPMN_PROCESS_ID;
 import static io.camunda.operate.schema.templates.ListViewTemplate.END_DATE;
 import static io.camunda.operate.schema.templates.ListViewTemplate.ERROR_MSG;
+import static io.camunda.operate.schema.templates.ListViewTemplate.INCIDENT_POSITION;
 import static io.camunda.operate.schema.templates.ListViewTemplate.JOB_FAILED_WITH_RETRIES_LEFT;
+import static io.camunda.operate.schema.templates.ListViewTemplate.JOB_POSITION;
 import static io.camunda.operate.schema.templates.ListViewTemplate.PROCESS_KEY;
 import static io.camunda.operate.schema.templates.ListViewTemplate.PROCESS_NAME;
 import static io.camunda.operate.schema.templates.ListViewTemplate.PROCESS_VERSION;
@@ -162,7 +164,7 @@ public class ListViewZeebeRecordProcessor {
     LOGGER.debug("Activity instance for list view: id {}", entity.getId());
     final var updateFields = new HashMap<String, Object>();
     updateFields.put(ERROR_MSG, entity.getErrorMessage());
-    updateFields.put(POSITION, entity.getPosition());
+    updateFields.put(INCIDENT_POSITION, entity.getPosition());
 
     final boolean concurrencyMode = importStore.getConcurrencyMode();
 
@@ -331,7 +333,7 @@ public class ListViewZeebeRecordProcessor {
               actEntity,
               getFlowNodeInstanceScript(),
               updateFields,
-              String.valueOf(piEntity.getProcessInstanceKey()));
+              processInstanceKey.toString());
         } else {
           batchRequest.upsertWithRouting(
               listViewTemplate.getFullQualifiedName(),
@@ -346,36 +348,38 @@ public class ListViewZeebeRecordProcessor {
 
   private String getVariableScript() {
     return String.format(
-        "if (ctx._source.%s < params.%s) { "
+        "if (ctx._source.%s == null || ctx._source.%s < params.%s) { "
             + "ctx._source.%s = params.%s; " // position
             + "ctx._source.%s = params.%s; " // var name
             + "ctx._source.%s = params.%s; " // var value
             + "}",
-        POSITION, POSITION, POSITION, POSITION, VAR_NAME, VAR_NAME, VAR_VALUE, VAR_VALUE);
+        POSITION, POSITION, POSITION, POSITION, POSITION, VAR_NAME, VAR_NAME, VAR_VALUE, VAR_VALUE);
   }
 
   private String getFlowNodeInstanceFromJobScript() {
     return String.format(
-        "if (ctx._source.%s < params.%s) { "
+        "if (ctx._source.%s == null || ctx._source.%s < params.%s) { "
             + "ctx._source.%s = params.%s; " // position
             + "ctx._source.%s = params.%s; " // failed with retries
             + "}",
-        POSITION,
-        POSITION,
-        POSITION,
-        POSITION,
+        JOB_POSITION,
+        JOB_POSITION,
+        JOB_POSITION,
+        JOB_POSITION,
+        JOB_POSITION,
         JOB_FAILED_WITH_RETRIES_LEFT,
         JOB_FAILED_WITH_RETRIES_LEFT);
   }
 
   private String getFlowNodeInstanceScript() {
     return String.format(
-        "if (ctx._source.%s < params.%s) { "
+        "if (ctx._source.%s == null || ctx._source.%s < params.%s) { "
             + "ctx._source.%s = params.%s; " // position
             + "ctx._source.%s = params.%s; " // activity id
             + "ctx._source.%s = params.%s; " // activity type
             + "ctx._source.%s = params.%s; " // activity state
             + "}",
+        POSITION,
         POSITION,
         POSITION,
         POSITION,
@@ -390,16 +394,22 @@ public class ListViewZeebeRecordProcessor {
 
   private String getIncidentScript() {
     return String.format(
-        "if (ctx._source.%s < params.%s) { "
+        "if (ctx._source.%s == null || ctx._source.%s < params.%s) { "
             + "ctx._source.%s = params.%s; " // position
             + "ctx._source.%s = params.%s; " // error message
             + "}",
-        POSITION, POSITION, POSITION, POSITION, ERROR_MSG, ERROR_MSG);
+        INCIDENT_POSITION,
+        INCIDENT_POSITION,
+        INCIDENT_POSITION,
+        INCIDENT_POSITION,
+        INCIDENT_POSITION,
+        ERROR_MSG,
+        ERROR_MSG);
   }
 
   private String getProcessInstanceScript() {
     return String.format(
-        "if (ctx._source.%s < params.%s) { "
+        "if (ctx._source.%s == null || ctx._source.%s < params.%s) { "
             + "ctx._source.%s = params.%s; " // position
             + "ctx._source.%s = params.%s; " // process name
             + "ctx._source.%s = params.%s; " // process version
@@ -409,6 +419,7 @@ public class ListViewZeebeRecordProcessor {
             + "if (params.%s != null) { ctx._source.%s = params.%s; }" // end date
             + "if (params.%s != null) { ctx._source.%s = params.%s; }" // state
             + "}",
+        POSITION,
         POSITION,
         POSITION,
         POSITION,
@@ -632,7 +643,7 @@ public class ListViewZeebeRecordProcessor {
         entity.isJobFailedWithRetriesLeft());
     final Map<String, Object> updateFields = new HashMap<>();
     updateFields.put(JOB_FAILED_WITH_RETRIES_LEFT, entity.isJobFailedWithRetriesLeft());
-    updateFields.put(POSITION, entity.getPosition());
+    updateFields.put(JOB_POSITION, entity.getPosition());
 
     if (importStore.getConcurrencyMode()) {
       batchRequest.upsertWithScriptAndRouting(
@@ -672,6 +683,7 @@ public class ListViewZeebeRecordProcessor {
     entity.setTenantId(tenantOrDefault(recordValue.getTenantId()));
 
     if (PI_AND_AI_FINISH_STATES.contains(intentStr)) {
+      // TODO this seems to never be updated in Elastic (updateFields does not include this)
       entity.setEndTime(record.getTimestamp());
       if (intentStr.equals(ELEMENT_TERMINATED.name())) {
         entity.setActivityState(FlowNodeState.TERMINATED);

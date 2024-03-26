@@ -200,7 +200,8 @@ public abstract class TestUtil {
 
   public static FlowNodeInstanceForListViewEntity createFlowNodeInstance(
       final Long processInstanceKey, final FlowNodeState state) {
-    return createFlowNodeInstance(processInstanceKey, state, "start", null, null);
+    return createFlowNodeInstance(
+        processInstanceKey, state, "start", FlowNodeType.SERVICE_TASK, null);
   }
 
   public static FlowNodeInstanceForListViewEntity createFlowNodeInstance(
