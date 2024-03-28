@@ -50,6 +50,17 @@ public interface ElementInstanceState {
   int getNumberOfTakenSequenceFlows(final long flowScopeKey, final DirectBuffer gatewayElementId);
 
   /**
+   * Returns the number of the taken sequence flows that are connected to the given inclusive
+   * (joining) gateway.
+   *
+   * @param flowScopeKey the key of the flow scope that contains the gateway
+   * @param gatewayElementId the element id of the gateway
+   * @return the number of taken sequence flows of the given gateway
+   */
+  int getAllNumberOfTakenSequenceFlows(
+      final long flowScopeKey, final DirectBuffer gatewayElementId);
+
+  /**
    * Returns a list of process instance keys that belong to a specific process definition.
    *
    * <p>Caution: This will also return the keys of banned process instances!

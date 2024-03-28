@@ -152,7 +152,10 @@ public final class EventAppliers implements EventApplier {
     register(
         ProcessInstanceIntent.ELEMENT_ACTIVATING,
         new ProcessInstanceElementActivatingApplier(
-            elementInstanceState, processState, eventScopeInstanceState));
+            elementInstanceState,
+            processState,
+            eventScopeInstanceState,
+            state.getPendingSequenceFlowState()));
     register(
         ProcessInstanceIntent.ELEMENT_ACTIVATED,
         new ProcessInstanceElementActivatedApplier(elementInstanceState));
@@ -176,7 +179,8 @@ public final class EventAppliers implements EventApplier {
             elementInstanceState, eventScopeInstanceState, bufferedStartMessageEventStateApplier));
     register(
         ProcessInstanceIntent.SEQUENCE_FLOW_TAKEN,
-        new ProcessInstanceSequenceFlowTakenApplier(elementInstanceState, processState));
+        new ProcessInstanceSequenceFlowTakenApplier(
+            elementInstanceState, processState, state.getPendingSequenceFlowState()));
     register(
         ProcessInstanceIntent.ELEMENT_MIGRATED,
         new ProcessInstanceElementMigratedApplier(elementInstanceState));

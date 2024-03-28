@@ -362,6 +362,22 @@ public final class DbElementInstanceState implements MutableElementInstanceState
   }
 
   @Override
+  public int getAllNumberOfTakenSequenceFlows(
+      final long flowScopeKey, final DirectBuffer gatewayElementId) {
+    this.flowScopeKey.wrapLong(flowScopeKey);
+    this.gatewayElementId.wrapBuffer(gatewayElementId);
+
+    final var count = new MutableInteger(0);
+    numberOfTakenSequenceFlowsColumnFamily.whileEqualPrefix(
+        flowScopeKeyAndElementId,
+        (key, number) -> {
+          count.set(count.addAndGet(number.getValue()));
+        });
+
+    return count.get();
+  }
+
+  @Override
   public List<Long> getProcessInstanceKeysByDefinitionKey(final long processDefinitionKey) {
     final List<Long> processInstanceKeys = new ArrayList<>();
     this.processDefinitionKey.wrapLong(processDefinitionKey);

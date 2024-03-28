@@ -21,9 +21,11 @@ import io.camunda.zeebe.engine.state.instance.ElementInstance;
 import io.camunda.zeebe.engine.state.instance.EventTrigger;
 import io.camunda.zeebe.engine.state.mutable.MutableElementInstanceState;
 import io.camunda.zeebe.engine.state.mutable.MutableEventScopeInstanceState;
+import io.camunda.zeebe.engine.state.mutable.MutablePendingSequenceFlowState;
 import io.camunda.zeebe.protocol.impl.record.value.processinstance.ProcessInstanceRecord;
 import io.camunda.zeebe.protocol.record.intent.ProcessInstanceIntent;
 import io.camunda.zeebe.protocol.record.value.BpmnElementType;
+import io.camunda.zeebe.util.buffer.BufferUtil;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -35,13 +37,16 @@ final class ProcessInstanceElementActivatingApplier
   private final MutableElementInstanceState elementInstanceState;
   private final ProcessState processState;
   private final MutableEventScopeInstanceState eventScopeInstanceState;
+  private final MutablePendingSequenceFlowState pendingSequenceFlowState;
 
   public ProcessInstanceElementActivatingApplier(
       final MutableElementInstanceState elementInstanceState,
       final ProcessState processState,
-      final MutableEventScopeInstanceState eventScopeInstanceState) {
+      final MutableEventScopeInstanceState eventScopeInstanceState,
+      final MutablePendingSequenceFlowState pendingSequenceFlowState) {
     this.elementInstanceState = elementInstanceState;
     this.processState = processState;
+    this.pendingSequenceFlowState = pendingSequenceFlowState;
     this.eventScopeInstanceState = eventScopeInstanceState;
   }
 
@@ -49,7 +54,7 @@ final class ProcessInstanceElementActivatingApplier
   public void applyState(final long elementInstanceKey, final ProcessInstanceRecord value) {
 
     createEventScope(elementInstanceKey, value);
-    cleanupSequenceFlowsTaken(value);
+    final var numberOfTakenSequenceFlows = cleanupSequenceFlowsTaken(value);
 
     final var flowScopeInstance = elementInstanceState.getInstance(value.getFlowScopeKey());
     elementInstanceState.newInstance(
@@ -63,7 +68,12 @@ final class ProcessInstanceElementActivatingApplier
     final var flowScopeElementType = flowScopeInstance.getValue().getBpmnElementType();
     final var currentElementType = value.getBpmnElementType();
 
-    decrementActiveSequenceFlow(value, flowScopeInstance, flowScopeElementType, currentElementType);
+    decrementActiveSequenceFlow(
+        value,
+        flowScopeInstance,
+        flowScopeElementType,
+        currentElementType,
+        numberOfTakenSequenceFlows);
 
     if (currentElementType == BpmnElementType.START_EVENT
         && flowScopeElementType == BpmnElementType.EVENT_SUB_PROCESS) {
@@ -76,7 +86,32 @@ final class ProcessInstanceElementActivatingApplier
     manageMultiInstance(elementInstanceKey, flowScopeInstance, flowScopeElementType);
   }
 
-  private void cleanupSequenceFlowsTaken(final ProcessInstanceRecord value) {
+  private void cleanupPendingSequenceFlows(final ProcessInstanceRecord value) {
+    processState
+        .getFlowElement(
+            value.getProcessDefinitionKey(),
+            value.getTenantId(),
+            value.getElementIdBuffer(),
+            ExecutableFlowNode.class)
+        .getIncoming()
+        .stream()
+        .map(ExecutableSequenceFlow::getId)
+        .forEach(
+            sequenceFlowId ->
+                pendingSequenceFlowState.delete(
+                    value.getTenantId(),
+                    value.getFlowScopeKey(),
+                    BufferUtil.bufferAsString(sequenceFlowId)));
+  }
+
+  private int cleanupSequenceFlowsTaken(final ProcessInstanceRecord value) {
+    // delete all pending sequence flows to this element
+    cleanupPendingSequenceFlows(value);
+
+    final int numberOfTakenSequenceFlows =
+        elementInstanceState.getAllNumberOfTakenSequenceFlows(
+            value.getFlowScopeKey(), value.getElementIdBuffer());
+
     if (value.getBpmnElementType() == BpmnElementType.PARALLEL_GATEWAY
         || value.getBpmnElementType() == BpmnElementType.INCLUSIVE_GATEWAY) {
 
@@ -86,7 +121,6 @@ final class ProcessInstanceElementActivatingApplier
               value.getTenantId(),
               value.getElementIdBuffer(),
               ExecutableFlowNode.class);
-
       // before a parallel or inclusive gateway is activated, all incoming sequence flows of the
       // gateway must
       // be taken at least once. decrement the number of the taken sequence flows for each incoming
@@ -95,6 +129,8 @@ final class ProcessInstanceElementActivatingApplier
       elementInstanceState.decrementNumberOfTakenSequenceFlows(
           value.getFlowScopeKey(), gateway.getId());
     }
+
+    return numberOfTakenSequenceFlows;
   }
 
   private void moveVariablesToNewEventScope(
@@ -131,7 +167,8 @@ final class ProcessInstanceElementActivatingApplier
       final ProcessInstanceRecord value,
       final ElementInstance flowScopeInstance,
       final BpmnElementType flowScopeElementType,
-      final BpmnElementType currentElementType) {
+      final BpmnElementType currentElementType,
+      final int numberOfTakenSequenceFlows) {
 
     // We don't want to decrement the active sequence flow for elements which have no incoming
     // sequence flow and for interrupting event sub processes we reset the count completely.
@@ -147,7 +184,7 @@ final class ProcessInstanceElementActivatingApplier
         decrementParallelGatewaySequenceFlow(value, flowScopeInstance);
         break;
       case INCLUSIVE_GATEWAY:
-        decrementInclusiveGatewayGatewaySequenceFlow(flowScopeInstance);
+        decrementInclusiveGatewaySequenceFlow(flowScopeInstance, numberOfTakenSequenceFlows);
         break;
       case EVENT_SUB_PROCESS:
         decrementEventSubProcessSequenceFlow(value, flowScopeInstance);
@@ -203,11 +240,13 @@ final class ProcessInstanceElementActivatingApplier
     elementInstanceState.updateInstance(flowScopeInstance);
   }
 
-  private void decrementInclusiveGatewayGatewaySequenceFlow(
-      final ElementInstance flowScopeInstance) {
-    // Currently the inclusive gateway can only have one incoming sequence flow.
+  private void decrementInclusiveGatewaySequenceFlow(
+      final ElementInstance flowScopeInstance, final int numberOfTakenSequenceFlows) {
+    // Inclusive gateways can have more than one incoming sequence flow, we need to decrement the
+    // active sequence flows based on the satisfied incoming sequence flows.
 
-    flowScopeInstance.decrementActiveSequenceFlows();
+    IntStream.range(0, numberOfTakenSequenceFlows)
+        .forEach(i -> flowScopeInstance.decrementActiveSequenceFlows());
     elementInstanceState.updateInstance(flowScopeInstance);
   }
 
