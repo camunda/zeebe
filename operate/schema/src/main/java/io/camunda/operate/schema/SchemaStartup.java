@@ -16,6 +16,9 @@
  */
 package io.camunda.operate.schema;
 
+import static io.camunda.operate.schema.SchemaManager.NUMBERS_OF_REPLICA;
+import static io.camunda.operate.schema.SchemaManager.REFRESH_INTERVAL;
+
 import io.camunda.operate.conditions.DatabaseInfo;
 import io.camunda.operate.exceptions.MigrationException;
 import io.camunda.operate.property.MigrationProperties;
@@ -71,6 +74,20 @@ public class SchemaStartup {
         LOGGER.info(
             "SchemaStartup: schema won't be created, it either already exist, or schema creation is disabled in configuration.");
       }
+      schemaManager.checkAndUpdateIndices();
+      // for testing
+      final Map<String, String> test = Map.of(NUMBERS_OF_REPLICA, "10", REFRESH_INTERVAL, "4s");
+      schemaManager
+          .getIndexNames("*")
+          .forEach(
+              index -> {
+                schemaManager.setIndexSettingsFor(test, index);
+                schemaManager.refresh(index);
+                final Map<String, String> indexSettings =
+                    schemaManager.getIndexSettingsFor(index, NUMBERS_OF_REPLICA, REFRESH_INTERVAL);
+                LOGGER.info("settings for index {}: {}", index, indexSettings);
+              });
+
       if (!newFields.isEmpty()) {
         if (createSchema) {
           schemaManager.updateSchema(newFields);
@@ -84,7 +101,7 @@ public class SchemaStartup {
         migrator.migrateData();
       }
       LOGGER.info("SchemaStartup finished.");
-    } catch (Exception ex) {
+    } catch (final Exception ex) {
       LOGGER.error("Schema startup failed: " + ex.getMessage(), ex);
       throw ex;
     }

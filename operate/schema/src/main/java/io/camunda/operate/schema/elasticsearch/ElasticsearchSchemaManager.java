@@ -93,23 +93,47 @@ public class ElasticsearchSchemaManager implements SchemaManager {
   }
 
   @Override
-  public boolean setIndexSettingsFor(Map<String, ?> settings, String indexPattern) {
+  public void checkAndUpdateIndices() {
+    LOGGER.info("Updating Indices with currently-configured number of replicas...");
+    final String currentConfigNumberOfReplicas =
+        String.valueOf(operateProperties.getElasticsearch().getNumberOfReplicas());
+    getIndexNames("*")
+        .forEach(
+            index -> {
+              final Map<String, String> indexSettings =
+                  getIndexSettingsFor(index, NUMBERS_OF_REPLICA);
+              final String currentIndexNumberOfReplicas = indexSettings.get(NUMBERS_OF_REPLICA);
+              if (currentIndexNumberOfReplicas == null
+                  || !currentIndexNumberOfReplicas.equals(currentConfigNumberOfReplicas)) {
+                indexSettings.put(NUMBERS_OF_REPLICA, currentConfigNumberOfReplicas);
+                final boolean success = setIndexSettingsFor(indexSettings, index);
+                if (success) {
+                  LOGGER.info("Successfully updated number of replicas for index {}", index);
+                } else {
+                  LOGGER.warn("Failed to update number of replicas for index {}", index);
+                }
+              }
+            });
+  }
+
+  @Override
+  public boolean setIndexSettingsFor(final Map<String, ?> settings, final String indexPattern) {
     return retryElasticsearchClient.setIndexSettingsFor(
         Settings.builder().loadFromMap(settings).build(), indexPattern);
   }
 
   @Override
-  public String getOrDefaultRefreshInterval(String indexName, String defaultValue) {
+  public String getOrDefaultRefreshInterval(final String indexName, final String defaultValue) {
     return retryElasticsearchClient.getOrDefaultRefreshInterval(indexName, defaultValue);
   }
 
   @Override
-  public String getOrDefaultNumbersOfReplica(String indexName, String defaultValue) {
+  public String getOrDefaultNumbersOfReplica(final String indexName, final String defaultValue) {
     return retryElasticsearchClient.getOrDefaultNumbersOfReplica(indexName, defaultValue);
   }
 
   @Override
-  public void refresh(String indexPattern) {
+  public void refresh(final String indexPattern) {
     retryElasticsearchClient.refresh(indexPattern);
   }
 
@@ -119,42 +143,42 @@ public class ElasticsearchSchemaManager implements SchemaManager {
   }
 
   @Override
-  public Set<String> getIndexNames(String indexPattern) {
+  public Set<String> getIndexNames(final String indexPattern) {
     return retryElasticsearchClient.getIndexNames(indexPattern);
   }
 
   @Override
-  public Set<String> getAliasesNames(String indexPattern) {
+  public Set<String> getAliasesNames(final String indexPattern) {
     return retryElasticsearchClient.getAliasesNames(indexPattern);
   }
 
   @Override
-  public long getNumberOfDocumentsFor(String... indexPatterns) {
+  public long getNumberOfDocumentsFor(final String... indexPatterns) {
     return retryElasticsearchClient.getNumberOfDocumentsFor(indexPatterns);
   }
 
   @Override
-  public boolean deleteIndicesFor(String indexPattern) {
+  public boolean deleteIndicesFor(final String indexPattern) {
     return retryElasticsearchClient.deleteIndicesFor(indexPattern);
   }
 
   @Override
-  public boolean deleteTemplatesFor(String deleteTemplatePattern) {
+  public boolean deleteTemplatesFor(final String deleteTemplatePattern) {
     return retryElasticsearchClient.deleteTemplatesFor(deleteTemplatePattern);
   }
 
   @Override
-  public void removePipeline(String pipelineName) {
+  public void removePipeline(final String pipelineName) {
     retryElasticsearchClient.removePipeline(pipelineName);
   }
 
   @Override
-  public boolean addPipeline(String name, String pipelineDefinition) {
+  public boolean addPipeline(final String name, final String pipelineDefinition) {
     return retryElasticsearchClient.addPipeline(name, pipelineDefinition);
   }
 
   @Override
-  public Map<String, String> getIndexSettingsFor(String indexName, String... fields) {
+  public Map<String, String> getIndexSettingsFor(final String indexName, final String... fields) {
     return retryElasticsearchClient.getIndexSettingsFor(indexName, fields);
   }
 
@@ -207,7 +231,7 @@ public class ElasticsearchSchemaManager implements SchemaManager {
         .build();
   }
 
-  private Settings getIndexSettings(String indexName) {
+  private Settings getIndexSettings(final String indexName) {
     final OperateElasticsearchProperties elsConfig = operateProperties.getElasticsearch();
     final var shards =
         elsConfig
@@ -355,7 +379,7 @@ public class ElasticsearchSchemaManager implements SchemaManager {
               templateDescriptor.getAlias(),
               AliasMetadata.builder(templateDescriptor.getAlias()).build());
       return new Template(ptr.settings(), new CompressedXContent(ptr.mappings()), aliases);
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new OperateRuntimeException(
           String.format("Error in reading mappings for %s ", templateDescriptor.getTemplateName()),
           e);
