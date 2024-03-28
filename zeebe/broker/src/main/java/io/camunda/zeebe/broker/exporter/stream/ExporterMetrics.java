@@ -33,18 +33,41 @@ public final class ExporterMetrics {
       Gauge.build()
           .namespace("zeebe")
           .name("exporter_last_updated_exported_position")
-          .help("The last exported position which was also updated/commited by the exporter.")
+          .help("The last exported position which was also updated/committed by the exporter.")
           .labelNames("exporter", "partition")
           .register();
 
+  private static final Gauge EXPORTER_STATE =
+      Gauge.build()
+          .namespace("zeebe")
+          .name("exporter_state")
+          .help(
+              "Describes the state of the exporter, namely if it is exporting, paused or soft paused.")
+          .labelNames("exporter", "partition")
+          .register();
   private final String partitionIdLabel;
+
+  private final Gauge.Child exporterState;
 
   public ExporterMetrics(final int partitionId) {
     partitionIdLabel = String.valueOf(partitionId);
+    exporterState = EXPORTER_STATE.labels("exporter", "partition");
   }
 
   private void event(final String action, final ValueType valueType) {
     EXPORTER_EVENTS.labels(action, partitionIdLabel, valueType.name()).inc();
+  }
+
+  public void setExporterActive() {
+    exporterState.set(0);
+  }
+
+  public void setExporterPaused() {
+    exporterState.set(1);
+  }
+
+  public void setExporterSoftPaused() {
+    exporterState.set(2);
   }
 
   public void eventExported(final ValueType valueType) {

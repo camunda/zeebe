@@ -542,6 +542,7 @@ public class StreamProcessor extends Actor implements HealthMonitorable, LogReco
 
     shouldProcess = false;
     streamProcessorContext.streamProcessorPhase(Phase.PAUSED);
+    metrics.setStreamProcessorPaused();
   }
 
   public void resumeProcessing() {
@@ -549,7 +550,7 @@ public class StreamProcessor extends Actor implements HealthMonitorable, LogReco
         () -> {
           if (!shouldProcess) {
             shouldProcess = true;
-
+            metrics.setStreamProcessorActive();
             if (isInReplayOnlyMode() || !replayCompletedFuture.isDone()) {
               streamProcessorContext.streamProcessorPhase(Phase.REPLAY);
               actor.submit(replayStateMachine::replayNextEvent);

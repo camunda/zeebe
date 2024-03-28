@@ -64,10 +64,28 @@ public final class StreamProcessorMetrics {
           .help("Time taken for startup and recovery of stream processor (in ms)")
           .labelNames(LABEL_NAME_PARTITION)
           .register();
+
+  private static final Gauge PROCESSOR_STATE =
+      Gauge.build()
+          .namespace(NAMESPACE)
+          .name("stream_processor_state")
+          .help("Describes the state of the stream processor, namely if it is active or paused.")
+          .labelNames(LABEL_NAME_PARTITION)
+          .register();
   private final String partitionIdLabel;
+  private final Gauge.Child processorState;
 
   public StreamProcessorMetrics(final int partitionId) {
     partitionIdLabel = String.valueOf(partitionId);
+    processorState = PROCESSOR_STATE.labels(partitionIdLabel);
+  }
+
+  public void setStreamProcessorActive() {
+    processorState.set(0);
+  }
+
+  public void setStreamProcessorPaused() {
+    processorState.set(1);
   }
 
   private void event(final String action) {
