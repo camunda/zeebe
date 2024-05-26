@@ -15,6 +15,7 @@
 package zbc
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -24,14 +25,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/camunda/zeebe/clients/go/v8/internal/embedded"
-	"google.golang.org/grpc/credentials/insecure"
-
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
+	"github.com/camunda/zeebe/clients/go/v8/internal/embedded"
 	"github.com/camunda/zeebe/clients/go/v8/pkg/commands"
 	"github.com/camunda/zeebe/clients/go/v8/pkg/pb"
 	"github.com/camunda/zeebe/clients/go/v8/pkg/worker"
@@ -84,52 +86,74 @@ func (e Error) Error() string {
 	return string(e)
 }
 
+func withStopOnPermanentError(shouldRetryRequest func(ctx context.Context, err error) bool) func(ctx context.Context, err error) bool {
+	return func(ctx context.Context, err error) bool {
+		switch {
+		case errors.Is(err, context.Canceled):
+			return false
+		case errors.Is(err, context.DeadlineExceeded):
+			return false
+		}
+
+		switch status.Code(err) {
+		case codes.Canceled, codes.DeadlineExceeded, codes.InvalidArgument, codes.Unimplemented:
+			return false
+		}
+
+		return shouldRetryRequest(ctx, err)
+	}
+}
+
+func (c *ClientImpl) shouldRetryRequest(ctx context.Context, err error) bool {
+	return withStopOnPermanentError(c.credentialsProvider.ShouldRetryRequest)(ctx, err)
+}
+
 func (c *ClientImpl) NewTopologyCommand() *commands.TopologyCommand {
-	return commands.NewTopologyCommand(c.gateway, c.credentialsProvider.ShouldRetryRequest)
+	return commands.NewTopologyCommand(c.gateway, c.shouldRetryRequest)
 }
 
 func (c *ClientImpl) NewDeployProcessCommand() *commands.DeployCommand {
-	return commands.NewDeployCommand(c.gateway, c.credentialsProvider.ShouldRetryRequest) // nolint
+	return commands.NewDeployCommand(c.gateway, c.shouldRetryRequest) // nolint
 }
 
 func (c *ClientImpl) NewDeployResourceCommand() *commands.DeployResourceCommand {
-	return commands.NewDeployResourceCommand(c.gateway, c.credentialsProvider.ShouldRetryRequest)
+	return commands.NewDeployResourceCommand(c.gateway, c.shouldRetryRequest)
 }
 
 func (c *ClientImpl) NewEvaluateDecisionCommand() commands.EvaluateDecisionCommandStep1 {
-	return commands.NewEvaluateDecisionCommand(c.gateway, c.credentialsProvider.ShouldRetryRequest)
+	return commands.NewEvaluateDecisionCommand(c.gateway, c.shouldRetryRequest)
 }
 
 func (c *ClientImpl) NewPublishMessageCommand() commands.PublishMessageCommandStep1 {
-	return commands.NewPublishMessageCommand(c.gateway, c.credentialsProvider.ShouldRetryRequest)
+	return commands.NewPublishMessageCommand(c.gateway, c.shouldRetryRequest)
 }
 
 func (c *ClientImpl) NewBroadcastSignalCommand() commands.BroadcastSignalCommandStep1 {
-	return commands.NewBroadcastSignalCommand(c.gateway, c.credentialsProvider.ShouldRetryRequest)
+	return commands.NewBroadcastSignalCommand(c.gateway, c.shouldRetryRequest)
 }
 
 func (c *ClientImpl) NewResolveIncidentCommand() commands.ResolveIncidentCommandStep1 {
-	return commands.NewResolveIncidentCommand(c.gateway, c.credentialsProvider.ShouldRetryRequest)
+	return commands.NewResolveIncidentCommand(c.gateway, c.shouldRetryRequest)
 }
 
 func (c *ClientImpl) NewCreateInstanceCommand() commands.CreateInstanceCommandStep1 {
-	return commands.NewCreateInstanceCommand(c.gateway, c.credentialsProvider.ShouldRetryRequest)
+	return commands.NewCreateInstanceCommand(c.gateway, c.shouldRetryRequest)
 }
 
 func (c *ClientImpl) NewCancelInstanceCommand() commands.CancelInstanceStep1 {
-	return commands.NewCancelInstanceCommand(c.gateway, c.credentialsProvider.ShouldRetryRequest)
+	return commands.NewCancelInstanceCommand(c.gateway, c.shouldRetryRequest)
 }
 
 func (c *ClientImpl) NewCompleteJobCommand() commands.CompleteJobCommandStep1 {
-	return commands.NewCompleteJobCommand(c.gateway, c.credentialsProvider.ShouldRetryRequest)
+	return commands.NewCompleteJobCommand(c.gateway, c.shouldRetryRequest)
 }
 
 func (c *ClientImpl) NewFailJobCommand() commands.FailJobCommandStep1 {
-	return commands.NewFailJobCommand(c.gateway, c.credentialsProvider.ShouldRetryRequest)
+	return commands.NewFailJobCommand(c.gateway, c.shouldRetryRequest)
 }
 
 func (c *ClientImpl) NewUpdateJobRetriesCommand() commands.UpdateJobRetriesCommandStep1 {
-	return commands.NewUpdateJobRetriesCommand(c.gateway, c.credentialsProvider.ShouldRetryRequest)
+	return commands.NewUpdateJobRetriesCommand(c.gateway, c.shouldRetryRequest)
 }
 
 func (c *ClientImpl) NewUpdateJobTimeoutCommand() commands.UpdateJobTimeoutCommandStep1 {
@@ -137,19 +161,19 @@ func (c *ClientImpl) NewUpdateJobTimeoutCommand() commands.UpdateJobTimeoutComma
 }
 
 func (c *ClientImpl) NewSetVariablesCommand() commands.SetVariablesCommandStep1 {
-	return commands.NewSetVariablesCommand(c.gateway, c.credentialsProvider.ShouldRetryRequest)
+	return commands.NewSetVariablesCommand(c.gateway, c.shouldRetryRequest)
 }
 
 func (c *ClientImpl) NewActivateJobsCommand() commands.ActivateJobsCommandStep1 {
-	return commands.NewActivateJobsCommand(c.gateway, c.credentialsProvider.ShouldRetryRequest)
+	return commands.NewActivateJobsCommand(c.gateway, c.shouldRetryRequest)
 }
 
 func (c *ClientImpl) NewThrowErrorCommand() commands.ThrowErrorCommandStep1 {
-	return commands.NewThrowErrorCommand(c.gateway, c.credentialsProvider.ShouldRetryRequest)
+	return commands.NewThrowErrorCommand(c.gateway, c.shouldRetryRequest)
 }
 
 func (c *ClientImpl) NewDeleteResourceCommand() commands.DeleteResourceCommandStep1 {
-	return commands.NewDeleteResourceCommand(c.gateway, c.credentialsProvider.ShouldRetryRequest)
+	return commands.NewDeleteResourceCommand(c.gateway, c.shouldRetryRequest)
 }
 
 func (c *ClientImpl) NewStreamJobsCommand() commands.StreamJobsCommandStep1 {
@@ -157,7 +181,7 @@ func (c *ClientImpl) NewStreamJobsCommand() commands.StreamJobsCommandStep1 {
 }
 
 func (c *ClientImpl) NewJobWorker() worker.JobWorkerBuilderStep1 {
-	return worker.NewJobWorkerBuilder(c.gateway, c, c.credentialsProvider.ShouldRetryRequest)
+	return worker.NewJobWorkerBuilder(c.gateway, c, c.shouldRetryRequest)
 }
 
 func (c *ClientImpl) Close() error {
