@@ -5,14 +5,11 @@
  * Licensed under the Camunda License 1.0. You may not use this file
  * except in compliance with the Camunda License 1.0.
  */
-package io.camunda.identity.usermanagement.repository;
+package io.camunda.identity.rolemanagement.repository;
 
-import io.camunda.identity.usermanagement.model.Group;
-import java.util.Optional;
+import io.camunda.identity.rolemanagement.model.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface GroupRepository extends JpaRepository<Group, Long> {
-  Optional<Group> findByName(String name);
-}
+public interface RoleRepository extends JpaRepository<Role, String> {}

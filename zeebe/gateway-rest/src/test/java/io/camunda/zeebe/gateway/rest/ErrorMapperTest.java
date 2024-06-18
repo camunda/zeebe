@@ -20,6 +20,9 @@ import io.camunda.zeebe.gateway.rest.ErrorMapperTest.TestErrorMapperApplication;
 import io.camunda.zeebe.gateway.rest.ErrorMapperTest.TestErrorMapperConfiguration;
 import io.camunda.zeebe.gateway.rest.controller.ResponseObserverProvider;
 import io.camunda.zeebe.gateway.rest.controller.UserTaskController;
+import io.camunda.zeebe.gateway.rest.controller.usermanagement.GroupController;
+import io.camunda.zeebe.gateway.rest.controller.usermanagement.RoleController;
+import io.camunda.zeebe.gateway.rest.controller.usermanagement.UserController;
 import io.camunda.zeebe.protocol.impl.record.value.usertask.UserTaskRecord;
 import io.camunda.zeebe.protocol.record.ErrorCode;
 import java.net.URI;
@@ -32,6 +35,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -50,6 +54,7 @@ import reactor.core.publisher.Mono;
       UserTaskController.class
     },
     webEnvironment = WebEnvironment.RANDOM_PORT)
+@AutoConfigureMockMvc(addFilters = false)
 public class ErrorMapperTest {
 
   private static final String USER_TASKS_BASE_URL = "/v1/user-tasks";
@@ -273,6 +278,21 @@ public class ErrorMapperTest {
     @Bean
     public ResponseObserverProvider responseObserverProvider() {
       return Mockito.mock(ResponseObserverProvider.class);
+    }
+
+    @Bean
+    public UserController userController() {
+      return Mockito.mock(UserController.class);
+    }
+
+    @Bean
+    public GroupController groupController() {
+      return Mockito.mock(GroupController.class);
+    }
+
+    @Bean
+    public RoleController roleController() {
+      return Mockito.mock(RoleController.class);
     }
   }
 }
