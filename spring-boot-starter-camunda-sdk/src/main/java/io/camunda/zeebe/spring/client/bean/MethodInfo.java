@@ -106,6 +106,10 @@ public class MethodInfo implements BeanInfo {
     return result;
   }
 
+  public Class<?> getReturnType() {
+    return method.getReturnType();
+  }
+
   public static MethodInfoBuilder builder() {
     return new MethodInfoBuilder();
   }
