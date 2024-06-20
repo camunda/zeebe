@@ -1,126 +1,68 @@
-# Contributing to Zeebe
+# Contributing to Camunda
 
-* [Build Zeebe from source](#build-zeebe-from-source)
-* [Report issues or contact developers](#report-issues-or-contact-developers)
-* [GitHub Issue Guidelines](#github-issue-guidelines)
-  * [Starting on an Issue](#starting-on-an-issue)
-  * [Creating a Pull Request](#creating-a-pull-request)
-  * [Reviewing a Pull Request](#reviewing-a-pull-request)
-  * [Review Emoji Code](#review-emoji-code)
-  * [Stale Pull Requests](#stale-pull-requests)
-  * [Backporting changes](#backporting-changes)
-  * [Commit Message Guidelines](#commit-message-guidelines)
-* [Contributor License Agreement](#contributor-license-agreement)
-* [Licenses](#licenses)
-* [Code of Conduct](#code-of-conduct)
+We welcome new contributions. We take pride in maintaining and encouraging a friendly, welcoming, and collaborative community.
 
-## Build Zeebe from source
+Anyone is welcome to contribute to Camunda! The best way to get started is to choose an existing [issue](#starting-on-an-issue).
 
-Zeebe is a multi-module maven project. To **quickly** build all components,
-run the command: `mvn clean install -Dquickly` in the root folder.
+Core code contributions must fit into the scope of Camunda products. The ultimate decision is up to the core Camunda team. If your vision does not fit in the core Camunda product, you may be directed to the [Camunda Community Hub](https://github.com/camunda-community-hub) and/or [Camunda Marketplace](https://marketplace.camunda.com/en-US/home) instead.
 
-> [!NOTE]
-> All Java modules in Zeebe are built and tested with JDK 21. Most modules use language level
-> 21, exceptions are: zeebe-bpmn-model, zeebe-client-java, zeebe-gateway-protocol,
-> zeebe-gateway-protocol-impl, zeebe-protocol and zeebe-protocol-jackson which use language level 8
->
-> The Go client and zbctl are built and tested with Go 1.22
->
-> The Java and the Go modules are built and tested with Docker 20.10.5 [with IPv6 support](https://docs.docker.com/config/daemon/ipv6/).
->
-> For macs using arm64 (Apple Silicon), must install Rosetta as some dependencies do not have native
-> arm binaries.
+- [Prerequisites](#prerequisites)
+  - [Contributor License Agreement](#contributor-license-agreement)
+  - [Code of Conduct](#code-of-conduct)
+- [GitHub issue guidelines](#github-issue-guidelines)
+  - [Starting on an issue](#starting-on-an-issue)
+- [Creating a pull request](#creating-a-pull-request)
+- [Reviewing a pull request](#reviewing-a-pull-request)
+  - [Review emoji code](#review-emoji-code)
+  - [Stale pull requests](#stale-pull-requests)
+- [Backporting changes](#backporting-changes)
+- [Commit message guidelines](#commit-message-guidelines)
+  - [Commit message header](#commit-message-header)
+  - [Commit message body](#commit-message-body)
+- [Build Camunda from source](#build-camunda-from-source)
+  - [Test Execution](#test-execution)
+    - [Test Troubleshooting](#test-troubleshooting)
+  - [Build profiling](#build-profiling)
 
-For contributions to Zeebe, building quickly is typically sufficient.
-However, users of Zeebe are recommended to build the full distribution.
+## Prerequisites
+### Contributor License Agreement
 
-To fully build the Zeebe distribution, run the command: `mvn clean install -DskipTests` in the root folder.
-This is slightly slower than building quickly but ensures the distribution is assembled completely.
-The resulting Zeebe distribution can be found in the folder `dist/target`, i.e.
+You will be asked to sign our [Contributor License Agreement](https://cla-assistant.io/camunda-community-hub/community) when you open a Pull Request. We are not
+asking you to assign copyright to us but to give us the right to distribute
+your code without restriction. We ask this of all contributors to
+assure our users of the origin and continuing existence of the code. 
 
-```
-dist/target/camunda-zeebe-X.Y.Z-SNAPSHOT.tar.gz
-dist/target/camunda-zeebe-X.Y.Z-SNAPSHOT.zip
-```
+*Note: In most cases, you will only need to sign the CLA once.* 
 
-This distribution can be containerized with Docker (i.e. build a Docker image) by running:
+### Code of Conduct
 
-```
-docker build \
-  --tag camunda/zeebe:local \
-  --build-arg DISTBALL='dist/target/camunda-zeebe*.tar.gz' \
-  --target app \
-  .
-```
+This project adheres to the [Camunda Code of Conduct](https://camunda.com/events/code-conduct/).
+By participating, you are expected to uphold this code. Please [report](https://camunda.com/events/code-conduct/reporting-violations/)
+unacceptable behavior as soon as possible.
 
-This is a small overview of the contents of the different modules:
-- `util` contains custom implementations of building blocks like an actor scheduler, buffer allocations, and metrics. Its parts are used in most of the other modules
-- `protocol` contains the SBE definition of the main message protocol
-- `bpmn-model` is a Java API for BPMN process definitions used for parsing etc.
-- `msgpack-*` is a custom msgpack implementation with extensions to evaluate json-path expressions on msgpack objects
-- `dispatcher` is a custom implementation of message passing between threads
-- `service-container` is a custom implementation to manage dependencies between different services
-- `logstreams` is an implementation of an append-only log backed by the filesystem
-- `transport` is our abstraction over network transports
-- `gateway` is the implementation of the gRPC gateway, using our SBE-based protocol to communicate with brokers
-- `gateway-protocol` contains the gRPC definitions for the Zeebe client-to-gateway protocol
-- `zb-db` is our RocksDB wrapper for state management
-- `engine`  is the implementation of the event stream processor
-- `broker` contains the Zeebe broker which is the server side of Zeebe
-- `client-java` contains the Java Zeebe client
-- `atomix` contains transport, membership, and consensus algorithms
-- `benchmark` contains utilities the team uses to run load tests
-- `exporters/elasticsearch-exporter` contains the official Elasticsearch exporter for Zeebe
-- `journal` contains the append-only log used by the consensus algorithm
-- `snapshots` abstracts how state snapshots (i.e. `zb-db`) are handled
-
-### Test Execution
-
-Tests can be executed via maven (`mvn verify`) or in your preferred IDE. The Zeebe Team uses mostly [Intellij IDEA](https://www.jetbrains.com/idea/), where we also [provide settings for](https://github.com/camunda/camunda/tree/main/.idea).
-
-> [!TIP]
-> To execute the tests quickly, run `mvn verify -Dquickly -DskipTests=false`.
-> The tests will be skipped when using `-Dquickly` without `-DskipTests=false`.
-
-#### Test Troubleshooting
-
-- If you encounter issues (like `java.lang.UnsatisfiedLinkError: failed to load the required native library`) while running the test StandaloneGatewaySecurityTest.shouldStartWithTlsEnabled take a look at https://github.com/camunda/camunda/issues/10488 to resolve it.
-
-### Build profiling
-
-The development team continues to push for a performant build.
-To investigate where the time is spent, you can run your maven command with the `-Dprofile` option.
-This will generate a profiler report in the `target` folder.
-
-## Report issues or contact developers
-
-Zeebe uses GitHub issues to organize the development process. If you want to
-report a bug or request a new feature feel free to open a new issue on
+## GitHub issue guidelines
+If you want to report a bug or request a new feature, feel free to open a new issue on
 [GitHub][issues].
 
 If you report a bug, please help speed up problem diagnosis by
-providing as much information as possible. Ideally, that would include a small
-[sample project][sample] that reproduces the problem.
+providing as much information as possible. Ideally, that would include a small [sample project][sample] that reproduces the problem.
 
-If you have a general usage question please ask on the [forum].
-
-## GitHub Issue Guidelines
+> :note: If you have a general usage question, please ask on the [forum](forum).
 
 Every issue should have a meaningful name and a description that either
 describes:
-- a new feature with details about the use case the feature would solve or
+- A new feature with details about the use case the feature would solve or
 improve
-- a problem, how we can reproduce it, and what the expected behavior would be
-- a change and the intention of how this would improve the system
+- A problem, how we can reproduce it, and what the expected behavior would be
+- A change and the intention of how this would improve the system
 
-## Starting on an issue
+### Starting on an issue
 
-The `main` branch contains the current in-development state of the project. To work on an issue,
-follow the following steps:
+The `main` branch contains the current in-development state of the project. To work on an issue, follow these steps:
 
 1. Check that a [GitHub issue][issues] exists for the task you want to work on.
    If one does not, create one. Refer to the [issue guidelines](#github-issue-guidelines).
-2. Check that no one is already working on the issue, and make sure the team would accept a pull request for this topic. Some topics are complex and may touch multiple of [Camunda's Components](https://docs.camunda.io/docs/components/), requiring internal coordination.
+2. Check that no one is already working on the issue, and make sure the team would accept a pull request for this topic. Some topics are complex and may touch multiple of [Camunda's cmponents](https://docs.camunda.io/docs/components/), requiring internal coordination.
 3. Checkout the `main` branch and pull the latest changes.
 
    ```
@@ -133,7 +75,7 @@ follow the following steps:
    git checkout -b 123-adding-bpel-support`
    ```
 5. Follow the [Google Java Format](https://github.com/google/google-java-format#intellij-android-studio-and-other-jetbrains-ides)
-   and [Zeebe Code Style](https://github.com/zeebe-io/zeebe/wiki/Code-Style) while coding.
+   and [Zeebe Code Style](https://github.com/camunda/camunda/wiki/Code-Style) while coding.
 6. Implement the required changes on your branch and regularly push your
    changes to the origin so that the CI can run. Code formatting, style, and
    license header are fixed automatically by running Maven. Checkstyle
@@ -143,11 +85,11 @@ follow the following steps:
    git commit -am 'feat: add BPEL execution support'
    git push -u origin 123-adding-bpel-support
    ```
-7. If you think you finished the issue please prepare the branch for review.
+7. If you think you finished the issue, please prepare the branch for review.
    Please consider our [pull requests and code
    reviews](https://github.com/camunda/camunda/wiki/Pull-Requests-and-Code-Reviews)
    guide, before requesting a review. In general, the commits should be squashed
-   into meaningful commits with a helpful message. This means cleanup/fix etc
+   into meaningful commits with a helpful message. This means cleanup/fix etc.
    commits should be squashed into the related commit. If you made refactorings
    it would be best if they are split up into another commit. Think about how
    a reviewer can best understand your changes. Please follow the
@@ -198,9 +140,9 @@ Before doing your first review, please have a look at this [guide](https://githu
 As a reviewer, you are encouraged to use the following [emoji code](#review-emoji-code) in your comments.
 
 The review should result in:
-- Approving the changes if there are only optional suggestions/minor issues 🔧, throughts 💭, or likes 👍
-- Requesting changes if there are major issues ❌
-- Commenting if there are open questions ❓
+- **Approving** the changes if there are only optional suggestions/minor issues 🔧, throughts 💭, or likes 👍
+- **Requesting changes** if there are major issues ❌
+- **Commenting** if there are open questions ❓
 
 ### Review emoji code
 
@@ -213,7 +155,7 @@ For example, to distinguish a required change from an optional suggestion.
 - 🔧 or `:wrench:`: This is a well-meant suggestion or minor issue. Take it or leave it. Nothing major that blocks merging.
 - 💭 or `:thought_balloon:`: I’m just thinking out loud here. Something doesn’t necessarily have to change, but I want to make sure to share my thoughts.
 
-_Inspired by [Microsofts emoji code](https://devblogs.microsoft.com/appcenter/how-the-visual-studio-mobile-center-team-does-code-review/#introducing-the-emoji-code)._
+_Inspired by [Microsoft's emoji code](https://devblogs.microsoft.com/appcenter/how-the-visual-studio-mobile-center-team-does-code-review/#introducing-the-emoji-code)._
 
 ### Stale pull requests
 
@@ -250,7 +192,7 @@ Please follow these steps to backport your changes:
         - Refer to the pull request in the description to link it (e.g. `backports #123`)
         - Refer to any issues that were referenced in the original pull request (e.g. `relates to #99`).
 
-## Commit Message Guidelines
+## Commit message guidelines
 
 Commit messages use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#summary) format.
 
@@ -262,7 +204,7 @@ Commit messages use [Conventional Commits](https://www.conventionalcommits.org/e
 <footer> (optional)
 ```
 
-Zeebe uses a GitHub Actions workflow to check your commit messages when a pull request is
+Camunda uses a GitHub Actions workflow to check your commit messages when a pull request is
 submitted. Please make sure to address any hints from the bot.
 
 ### Commit message header
@@ -301,37 +243,83 @@ This is optional but encouraged.
 Good commit messages explain what changed AND why you changed it.
 See [I've written a clear changelist description](https://github.com/camunda/camunda/wiki/Pull-Requests-and-Code-Reviews#ive-written-a-clear-changelist-description).
 
-## Contributor License Agreement
 
-You will be asked to sign our Contributor License Agreement when you open a Pull Request. We are not
-asking you to assign copyright to us but to give us the right to distribute
-your code without restriction. We ask this of all contributors to
-assure our users of the origin and continuing existence of the code. You only
-need to sign the CLA once.
+## Build Camunda from source
 
-## Licenses
+Camunda is a multi-module Maven project. To **quickly** build all components,
+run the command: `mvn clean install -Dquickly` in the root folder.
 
-Zeebe, Operate, and Tasklist source files are made available under the
-[Camunda License Version 1.0](/licenses/CAMUNDA-LICENSE-1.0.txt) except for the parts listed
-below, which are made available under the [Apache License, Version
-2.0](/licenses/APACHE-2.0.txt).  See individual source files for details.
+> [!NOTE]
+> All Java modules in Zeebe are built and tested with JDK 21. Most modules use language level
+> 21, exceptions are: zeebe-bpmn-model, zeebe-client-java, zeebe-gateway-protocol,
+> zeebe-gateway-protocol-impl, zeebe-protocol and zeebe-protocol-jackson which use language level 8
+>
+> The Go client and zbctl are built and tested with Go 1.22
+>
+> The Java and the Go modules are built and tested with Docker 20.10.5 [with IPv6 support](https://docs.docker.com/config/daemon/ipv6/).
+>
+> Macs using arm64 (Apple Silicon) must install Rosetta as some dependencies do not have native arm binaries.
 
-Available under the [Apache License, Version 2.0](/licenses/APACHE-2.0.txt):
-- Java Client ([clients/java](/clients/java))
-- Go Client ([clients/go](/clients/go))
-- Exporter API ([exporter-api](/exporter-api))
-- Protocol ([protocol](/protocol))
-- Gateway Protocol Implementation ([gateway-protocol-impl](/gateway-protocol-impl))
-- BPMN Model API ([bpmn-model](/bpmn-model))
+For contributions to Camunda, building quickly is typically sufficient.
+However, users of Camunda are recommended to build the full distribution.
 
-If you would like to contribute something, or simply want to hack on the code
-this document should help you get started.
+To fully build the Zeebe distribution, run the command: `mvn clean install -DskipTests` in the root folder.
+This is slightly slower than building quickly but ensures the distribution is assembled completely.
+The resulting Zeebe distribution can be found in the folder `dist/target`, i.e.
 
-## Code of Conduct
+```
+dist/target/camunda-zeebe-X.Y.Z-SNAPSHOT.tar.gz
+dist/target/camunda-zeebe-X.Y.Z-SNAPSHOT.zip
+```
 
-This project adheres to the [Camunda Code of Conduct](https://camunda.com/events/code-conduct/).
-By participating, you are expected to uphold this code. Please [report](https://camunda.com/events/code-conduct/reporting-violations/)
-unacceptable behavior as soon as possible.
+This distribution can be containerized with Docker (i.e. build a Docker image) by running:
+
+```
+docker build \
+  --tag camunda/zeebe:local \
+  --build-arg DISTBALL='dist/target/camunda-zeebe*.tar.gz' \
+  --target app \
+  .
+```
+
+This is a small overview of the contents of the different modules:
+- `util` contains custom implementations of building blocks like an actor scheduler, buffer allocations, and metrics. Its parts are used in most of the other modules
+- `protocol` contains the SBE definition of the main message protocol
+- `bpmn-model` is a Java API for BPMN process definitions used for parsing etc.
+- `msgpack-*` is a custom msgpack implementation with extensions to evaluate json-path expressions on msgpack objects
+- `dispatcher` is a custom implementation of message passing between threads
+- `service-container` is a custom implementation to manage dependencies between different services
+- `logstreams` is an implementation of an append-only log backed by the filesystem
+- `transport` is our abstraction over network transports
+- `gateway` is the implementation of the gRPC gateway, using our SBE-based protocol to communicate with brokers
+- `gateway-protocol` contains the gRPC definitions for the Zeebe client-to-gateway protocol
+- `zb-db` is our RocksDB wrapper for state management
+- `engine`  is the implementation of the event stream processor
+- `broker` contains the Zeebe broker which is the server side of Zeebe
+- `client-java` contains the Java Zeebe client
+- `atomix` contains transport, membership, and consensus algorithms
+- `benchmark` contains utilities the team uses to run load tests
+- `exporters/elasticsearch-exporter` contains the official Elasticsearch exporter for Zeebe
+- `journal` contains the append-only log used by the consensus algorithm
+- `snapshots` abstracts how state snapshots (i.e. `zb-db`) are handled
+
+### Test Execution
+
+Tests can be executed via Maven (`mvn verify`) or in your preferred IDE. The Zeebe Team uses mostly [Intellij IDEA](https://www.jetbrains.com/idea/), where we also [provide settings for](https://github.com/camunda/camunda/tree/main/.idea).
+
+> [!TIP]
+> To execute the tests quickly, run `mvn verify -Dquickly -DskipTests=false`.
+> The tests will be skipped when using `-Dquickly` without `-DskipTests=false`.
+
+#### Test Troubleshooting
+
+- If you encounter issues (like `java.lang.UnsatisfiedLinkError: failed to load the required native library`) while running the test StandaloneGatewaySecurityTest.shouldStartWithTlsEnabled take a look at https://github.com/camunda/camunda/issues/10488 to resolve it.
+
+### Build profiling
+
+The development team continues to push for a performant build.
+To investigate where the time is spent, you can run your Maven command with the `-Dprofile` option.
+This will generate a profiler report in the `target` folder.
 
 [issues]: https://github.com/camunda/camunda/issues
 [forum]: https://forum.camunda.io/
@@ -339,4 +327,5 @@ unacceptable behavior as soon as possible.
 [clients/java]: https://github.com/camunda/camunda/labels/scope%2Fclients-java
 [clients/go]: https://github.com/camunda/camunda/labels/scope%2Fclients-go
 [changelog generation]: https://github.com/zeebe-io/zeebe-changelog
+
 
