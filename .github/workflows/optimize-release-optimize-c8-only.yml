@@ -69,15 +69,6 @@ jobs:
           echo "DOCKER_LATEST: ${{ inputs.DOCKER_LATEST }}"
           echo "IS_DRY_RUN: ${{ inputs.IS_DRY_RUN }}"
 
-      # - name: Generate a GitHub token
-      #   id: github-token
-      #   uses: actions/create-github-app-token@v1
-      #   with:
-      #     owner: ${{ github.repository_owner }}
-      #     repositories: "camunda, camunda-optimize"
-      #     app-id: ${{ vars.MONOREPO_APP_ID }}
-      #     private-key: ${{ secrets.MONOREPO_APP_SECRET }}
-
       - name: "Read Java / Version Info"
         id: "pom-info"
         uses: YunaBraska/java-info-action@main
@@ -90,7 +81,7 @@ jobs:
       - name: Is current release major or minor.
         id: release-type
         env:
-          RELEASE_VERSION: ${{ github.event.inputs.RELEASE_VERSION || '8.6.0-alpha3-rc1' }}
+          RELEASE_VERSION: ${{ github.event.inputs.RELEASE_VERSION || '8.6.0-alpha3-rc2' }}
         run: |
           is_major_or_minor="false"
           is_patch="true"
@@ -132,7 +123,7 @@ jobs:
           {
             echo "DOCKER_LATEST=${{ github.event.inputs.DOCKER_LATEST || false}}"
             echo "DEVELOPMENT_VERSION=${{ github.event.inputs.DEVELOPMENT_VERSION || '8.6.0-SNAPSHOT' }}"
-            echo "RELEASE_VERSION=${{ github.event.inputs.RELEASE_VERSION || '8.6.0-alpha3-rc1' }}"
+            echo "RELEASE_VERSION=${{ github.event.inputs.RELEASE_VERSION || '8.6.0-alpha3-rc2' }}"
             echo "BRANCH=${{ github.event.inputs.BRANCH || 'test-optimize-release' }}"
             echo "REVISION=${{ steps.define-values.outputs.git_commit_hash }}"
             echo "MAJOR_OR_MINOR=${{ steps.release-type.outputs.is_major_or_minor }}"
@@ -140,17 +131,8 @@ jobs:
             echo "IS_ALPHA=${{ steps.release-type.outputs.is_alpha }}"
             echo "IS_RC=${{ steps.release-type.outputs.is_rc }}"
             echo "IS_DRY_RUN=${{ github.event.inputs.IS_DRY_RUN || 'false' }}"
-            echo "TAG=${{ github.event.inputs.RELEASE_VERSION || '8.6.0-alpha3-rc1' }}-optimize-test"
+            echo "TAG=${{ github.event.inputs.RELEASE_VERSION || '8.6.0-alpha3-rc2' }}-optimize-test"
           } >> "$GITHUB_ENV"
-
-      # # When it's neither a dry run nor a release candidate it means we are running the workflow from the proper branch.
-      # # Generating changelog and creating a draft release will only work on the proper branch.
-      # - name: Generate changelog
-      #   if: env.IS_DRY_RUN == 'false' && env.IS_RC == 'false'
-      #   uses: ./.github/actions/generate-changelog
-      #   id: changelog
-      #   with:
-      #     branch: ${{ env.BRANCH }}
 
       - name: Login to prod Harbor docker registry
         uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3
@@ -185,60 +167,60 @@ jobs:
             --fail-at-end \
             -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
 
-      # - name: Push changes
-      #   if: env.IS_DRY_RUN == 'false'
-      #   run: |
-      #     git push --tags
-      #     git push --all
+      - name: Push changes
+        if: env.IS_DRY_RUN == 'false'
+        run: |
+          git push --tags
+          git push --all
 
-      # - name: Perform release
-      #   run: |
-      #     mvn -f optimize \
-      #       -DlocalCheckout=true \
-      #       -DskipTests=true \
-      #       -B \
-      #       --fail-at-end \
-      #       -Prelease,engine-latest \
-      #       -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
-      #       release:perform \
-      #       -Darguments="-Dmaven.deploy.skip=${IS_DRY_RUN} -DskipTests -DskipNexusStagingDeployMojo=${IS_DRY_RUN} -B --fail-at-end -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -f pom.xml"
+      - name: Perform release
+        run: |
+          mvn -f optimize \
+            -DlocalCheckout=true \
+            -DskipTests=true \
+            -B \
+            --fail-at-end \
+            -Prelease,engine-latest \
+            -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
+            release:perform \
+            -Darguments="-Dmaven.deploy.skip=${IS_DRY_RUN} -DskipTests -DskipNexusStagingDeployMojo=${IS_DRY_RUN} -B --fail-at-end -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -f pom.xml"
 
-      # - name: Remove tag for RC release
-      #   if: env.IS_RC == 'true'
-      #   run: |
-      #     git tag -d ${TAG}
-      #     git push origin :refs/tags/${TAG}
+      - name: Remove tag for RC release
+        if: env.IS_RC == 'true'
+        run: |
+          git tag -d ${TAG}
+          git push origin :refs/tags/${TAG}
 
-      # - name: Auto-update previous version
-      #   run: |
-      #     if [ "$IS_PATCH" = "false" ]; then
-      #       # only major / minor GA (.0) release versions will trigger an auto-update of previousVersion property.
-      #       echo "Auto-updating previousVersion property as release version is a valid major/minor version."
-      #       git fetch
-      #       git checkout ${BRANCH}
-      #       sed -i "s/project.previousVersion>.*</project.previousVersion>${RELEASE_VERSION}</g" pom.xml
-      #       git add pom.xml
-      #       # This is needed to not abort the job in case 'git diff' returns a status different from 0
-      #       set +e
-      #       git diff --staged --quiet
-      #       diff_result=$?
-      #       set -e
+      - name: Auto-update previous version
+        run: |
+          if [ "$IS_PATCH" = "false" ]; then
+            # only major / minor GA (.0) release versions will trigger an auto-update of previousVersion property.
+            echo "Auto-updating previousVersion property as release version is a valid major/minor version."
+            git fetch
+            git checkout ${BRANCH}
+            sed -i "s/project.previousVersion>.*</project.previousVersion>${RELEASE_VERSION}</g" pom.xml
+            git add pom.xml
+            # This is needed to not abort the job in case 'git diff' returns a status different from 0
+            set +e
+            git diff --staged --quiet
+            diff_result=$?
+            set -e
 
-      #       if [ $diff_result -ne 0 ]; then
-      #         git commit -m "chore: update previousVersion to new release version ${RELEASE_VERSION}"
-      #         echo "pushing to branch ${BRANCH}"
-      #         if [ "$IS_DRY_RUN" = "true" ]; then
-      #           echo "not pushing to branch ${BRANCH} in dry run mode"
-      #         else
-      #           echo "pushing to branch ${BRANCH}"
-      #           git push origin ${BRANCH}
-      #         fi
-      #       else
-      #         echo "Release version ${RELEASE_VERSION} did not change. Nothing to commit."
-      #       fi
-      #     else
-      #       echo "Not auto-updating previousVersion property as release version is not a valid major/minor version."
-      #     fi
+            if [ $diff_result -ne 0 ]; then
+              git commit -m "chore: update previousVersion to new release version ${RELEASE_VERSION}"
+              echo "pushing to branch ${BRANCH}"
+              if [ "$IS_DRY_RUN" = "true" ]; then
+                echo "not pushing to branch ${BRANCH} in dry run mode"
+              else
+                echo "pushing to branch ${BRANCH}"
+                git push origin ${BRANCH}
+              fi
+            else
+              echo "Release version ${RELEASE_VERSION} did not change. Nothing to commit."
+            fi
+          else
+            echo "Not auto-updating previousVersion property as release version is not a valid major/minor version."
+          fi
 
       - name: Build Docker Image
         run: |
@@ -305,17 +287,6 @@ jobs:
           version: ${{ env.RELEASE_VERSION }}
           date: ${{ env.DATE }}
           revision: ${{ env.REVISION }}
-
-      # - name: Create a draft release
-      #   if: env.IS_DRY_RUN == 'false' && env.IS_RC == 'false'
-      #   run: |
-      #     curl -L \
-      #     -X POST \
-      #     -H "Accept: application/vnd.github+json" \
-      #     -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-      #     -H "X-GitHub-Api-Version: 2022-11-28" \
-      #     https://api.github.com/repos/${{ github.repository }}/releases \
-      #     -d '{"tag_name":"${{ env.RELEASE_VERSION }}","target_commitish":"${{ github.sha }}","name":"${{ env.RELEASE_VERSION }}","body":${{ toJson(steps.changelog.outputs.changelog) }},"draft":true,"prerelease":${{ env.IS_ALPHA == 'true' }},"generate_release_notes":false,"make_latest":"${{ env.DOCKER_LATEST }}"}'
 
       - name: Docker log dump
         uses: ./.github/actions/docker-logs
