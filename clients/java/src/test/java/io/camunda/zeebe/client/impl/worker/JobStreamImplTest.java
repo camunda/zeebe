@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.client.api.worker.JobClient;
-import io.camunda.zeebe.client.impl.ZeebeClientBuilderImpl;
+import io.camunda.zeebe.client.impl.CamundaClientBuilderImpl;
 import io.camunda.zeebe.client.impl.ZeebeObjectMapper;
 import io.camunda.zeebe.client.util.JsonUtil;
 import io.camunda.zeebe.gateway.protocol.GatewayGrpc;
@@ -73,7 +73,7 @@ final class JobStreamImplTest {
         InProcessServerBuilder.forName(name).directExecutor().addService(service).build().start());
     client =
         new JobClientImpl(
-            asyncStub, new ZeebeClientBuilderImpl(), new ZeebeObjectMapper(), ignored -> false);
+            asyncStub, new CamundaClientBuilderImpl(), new ZeebeObjectMapper(), ignored -> false);
     jobStreamer = createStreamer();
   }
 
