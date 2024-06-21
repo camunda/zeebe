@@ -60,14 +60,14 @@ public abstract class ProcessGroupByDto<VALUE extends ProcessGroupByValueDto>
   }
 
   @Override
-  public boolean isCombinable(Object o) {
+  public boolean isCombinable(final Object o) {
     if (this == o) {
       return true;
     }
     if (!(o instanceof ProcessGroupByDto)) {
       return false;
     }
-    ProcessGroupByDto<?> that = (ProcessGroupByDto<?>) o;
+    final ProcessGroupByDto<?> that = (ProcessGroupByDto<?>) o;
     return isTypeCombinable(that) && Combinable.isCombinable(value, that.value);
   }
 

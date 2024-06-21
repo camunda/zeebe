@@ -20,9 +20,12 @@ public class AbstractUpgrade86IT extends AbstractUpgradeIT {
   protected static final String FROM_VERSION = "3.13.0";
   protected static final String TO_VERSION = "8.6.0";
 
+  @SuppressWarnings("checkstyle:membername")
   protected final OnboardingStateIndexV2 ONBOARDING_STATE_INDEX = new OnboardingStateIndexV2();
+  @SuppressWarnings("checkstyle:membername")
   protected final SettingsIndexV2 SETTINGS_INDEX = new SettingsIndexV2();
 
+  @Override
   @BeforeEach
   protected void setUp() throws Exception {
     super.setUp();

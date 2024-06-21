@@ -29,7 +29,7 @@ import org.opensearch.client.opensearch._types.Script;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class OpenSearchWriterUtil {
 
-  public static final DateTimeFormatter dateTimeFormatter =
+  public static final DateTimeFormatter DATE_TIME_FORMATTER =
       DateTimeFormatter.ofPattern(OPTIMIZE_DATE_FORMAT);
 
   public static Script createFieldUpdateScript(
@@ -52,14 +52,15 @@ public class OpenSearchWriterUtil {
 
   public static Map<String, JsonData> createFieldUpdateScriptParams(
       final Set<String> fields, final Object entityDto, final ObjectMapper objectMapper) {
-    Map<String, Object> entityAsMap =
-        objectMapper.convertValue(entityDto, new TypeReference<>() {});
+    final Map<String, Object> entityAsMap =
+        objectMapper.convertValue(entityDto, new TypeReference<>() {
+        });
     final Map<String, JsonData> params = new HashMap<>();
-    for (String fieldName : fields) {
+    for (final String fieldName : fields) {
       Object fieldValue = entityAsMap.get(fieldName);
       if (fieldValue != null) {
-        if (fieldValue instanceof TemporalAccessor temporalAccessor) {
-          fieldValue = dateTimeFormatter.format(temporalAccessor);
+        if (fieldValue instanceof final TemporalAccessor temporalAccessor) {
+          fieldValue = DATE_TIME_FORMATTER.format(temporalAccessor);
         }
         params.put(fieldName, JsonData.of(fieldValue));
       }

@@ -38,10 +38,10 @@ public abstract class EventSourceEntryDto<CONFIG extends EventSourceConfigDto> {
   @EqualsAndHashCode.Include @NonNull @Builder.Default
   protected String id = IdGenerator.getNextId();
 
+  @NotNull protected CONFIG configuration;
+
   @JsonIgnore
   public abstract EventSourceType getSourceType();
-
-  @NotNull protected CONFIG configuration;
 
   // This source identifier is only used internally by Optimize for logic such as autogeneration
   @JsonIgnore

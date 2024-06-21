@@ -46,7 +46,7 @@ public class OptimizeElasticsearchClientTest {
   @Test
   public void indexDeleteIsRetriedOnPendingSnapshot() throws IOException, InterruptedException {
     // given
-    RequestOptionsProvider requestOptionsProvider = new RequestOptionsProvider();
+    final RequestOptionsProvider requestOptionsProvider = new RequestOptionsProvider();
     underTest =
         new OptimizeElasticsearchClient(
             highLevelRestClient, indexNameService, requestOptionsProvider, objectMapper);

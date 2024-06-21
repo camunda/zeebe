@@ -18,11 +18,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaginationScrollableDto extends PaginationDto {
+
   protected String scrollId;
   protected Integer scrollTimeout;
 
   public static PaginationScrollableDto fromPaginationDto(final PaginationDto pagination) {
-    PaginationScrollableDto paginationObject = new PaginationScrollableDto();
+    final PaginationScrollableDto paginationObject = new PaginationScrollableDto();
     paginationObject.limit = pagination.getLimit();
     paginationObject.offset = pagination.getOffset();
     if (pagination instanceof PaginationScrollableDto) {

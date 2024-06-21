@@ -33,7 +33,7 @@ public class EventSearchRequestDto {
   public static final int DEFAULT_LIMIT = 20;
   public static final int DEFAULT_OFFSET = 0;
 
-  public static final List<String> sortableFields =
+  public static final List<String> SORTABLE_FIELDS =
       ImmutableList.of(
           EventDto.Fields.group.toLowerCase(Locale.ENGLISH),
           EventDto.Fields.source.toLowerCase(Locale.ENGLISH),
@@ -66,7 +66,7 @@ public class EventSearchRequestDto {
               "Cannot supply only one of %s and %s",
               SortRequestDto.SORT_BY, SortRequestDto.SORT_ORDER));
     } else if (sortBy.isPresent()
-        && !EventSearchRequestDto.sortableFields.contains(
+        && !EventSearchRequestDto.SORTABLE_FIELDS.contains(
             sortBy.get().toLowerCase(Locale.ENGLISH))) {
       throw new BadRequestException(String.format("%s is not a sortable field", sortBy.get()));
     }

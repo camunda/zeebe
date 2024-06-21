@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 public interface BusinessKeyWriter {
 
+  @SuppressWarnings("checkstyle:constantname")
   Logger log = LoggerFactory.getLogger(BusinessKeyWriter.class);
 
   void deleteByProcessInstanceIds(final List<String> processInstanceIds);
@@ -24,11 +25,11 @@ public interface BusinessKeyWriter {
       final BusinessKeyDto businessKeyDto, final String importItemName);
 
   default List<ImportRequestDto> generateBusinessKeyImports(
-      List<ProcessInstanceDto> processInstanceDtos) {
-    List<BusinessKeyDto> businessKeysToSave =
+      final List<ProcessInstanceDto> processInstanceDtos) {
+    final List<BusinessKeyDto> businessKeysToSave =
         processInstanceDtos.stream().map(this::extractBusinessKey).distinct().toList();
 
-    String importItemName = "business keys";
+    final String importItemName = "business keys";
     log.debug("Creating imports for {} [{}].", businessKeysToSave.size(), importItemName);
 
     return businessKeysToSave.stream()

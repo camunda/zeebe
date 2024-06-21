@@ -52,14 +52,14 @@ public abstract class DecisionGroupByDto<VALUE extends DecisionGroupByValueDto>
   }
 
   @Override
-  public boolean isCombinable(Object o) {
+  public boolean isCombinable(final Object o) {
     if (this == o) {
       return true;
     }
     if (!(o instanceof DecisionGroupByDto)) {
       return false;
     }
-    DecisionGroupByDto<?> that = (DecisionGroupByDto<?>) o;
+    final DecisionGroupByDto<?> that = (DecisionGroupByDto<?>) o;
     return Objects.equals(type, that.type) && Combinable.isCombinable(value, that.value);
   }
 

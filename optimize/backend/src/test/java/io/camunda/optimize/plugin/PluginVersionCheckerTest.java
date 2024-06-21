@@ -27,9 +27,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("checkstyle:methodname")
 public class PluginVersionCheckerTest {
 
-  @Mock PluginClassLoader classLoader;
+  @Mock
+  PluginClassLoader classLoader;
 
   @Test
   public void validatePluginVersion_validVersion() throws IOException {
@@ -58,7 +60,7 @@ public class PluginVersionCheckerTest {
     when(classLoader.getPluginResourceAsStream(OPTIMIZE_VERSION_FILE_NAME)).thenReturn(null);
 
     // then
-    OptimizeRuntimeException exception =
+    final OptimizeRuntimeException exception =
         assertThrows(OptimizeRuntimeException.class, () -> validatePluginVersion(classLoader));
     assertThat(exception.getMessage()).isEqualTo(buildMissingPluginVersionMessage(Version.VERSION));
   }
@@ -72,7 +74,7 @@ public class PluginVersionCheckerTest {
                 OPTIMIZE_VERSION_KEY + "=" + "nope_definitely_not_valid", "UTF-8"));
 
     // then
-    OptimizeRuntimeException exception =
+    final OptimizeRuntimeException exception =
         assertThrows(OptimizeRuntimeException.class, () -> validatePluginVersion(classLoader));
     assertThat(exception.getMessage())
         .isEqualTo(
@@ -86,7 +88,7 @@ public class PluginVersionCheckerTest {
         .thenReturn(IOUtils.toInputStream("hello.world" + "=" + "how.are.you", "UTF-8"));
 
     // then
-    OptimizeRuntimeException exception =
+    final OptimizeRuntimeException exception =
         assertThrows(OptimizeRuntimeException.class, () -> validatePluginVersion(classLoader));
     assertThat(exception.getMessage()).isEqualTo(buildMissingPluginVersionMessage(Version.VERSION));
   }

@@ -44,17 +44,23 @@ import org.mockito.quality.Strictness;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
+@SuppressWarnings("checkstyle:methodname")
 public class CCSMUserCacheTest {
+
   public static final String ACCESS_TOKEN = "testToken";
   public static final UserDto TEST_USER_1 =
       new UserDto("123", "Donna Noble", "donna@email.com", Collections.emptyList());
   public static final UserDto TEST_USER_2 =
       new UserDto("456", "John Smith", "john@email.com", Collections.emptyList());
 
-  @Mock Identity identity;
-  @Mock Users users;
-  @Mock CCSMTokenService ccsmTokenService;
-  @Mock Cache<String, UserDto> ccsmUsersCache;
+  @Mock
+  Identity identity;
+  @Mock
+  Users users;
+  @Mock
+  CCSMTokenService ccsmTokenService;
+  @Mock
+  Cache<String, UserDto> ccsmUsersCache;
 
   @Mock(answer = Answers.RETURNS_DEEP_STUBS)
   ConfigurationService configurationService;

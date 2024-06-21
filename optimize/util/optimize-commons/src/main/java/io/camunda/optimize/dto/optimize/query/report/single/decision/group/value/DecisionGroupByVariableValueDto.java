@@ -24,14 +24,14 @@ public class DecisionGroupByVariableValueDto implements DecisionGroupByValueDto 
   }
 
   @Override
-  public boolean isCombinable(Object o) {
+  public boolean isCombinable(final Object o) {
     if (this == o) {
       return true;
     }
     if (!(o instanceof DecisionGroupByVariableValueDto)) {
       return false;
     }
-    DecisionGroupByVariableValueDto that = (DecisionGroupByVariableValueDto) o;
+    final DecisionGroupByVariableValueDto that = (DecisionGroupByVariableValueDto) o;
     return Objects.equals(id, that.id);
   }
 }

@@ -41,7 +41,6 @@ public abstract class DatabaseClient implements ConfigurationReloadable {
    * @return A Map where the keys are the name of the matching indexes and the value is a set
    *     containing the aliases for the respective index. This map can have multiple keys because
    *     indexNamePattern may contain wildcards
-   * @throws IOException
    */
   public abstract Map<String, Set<String>> getAliasesForIndexPattern(final String indexNamePattern)
       throws IOException;
@@ -128,6 +127,7 @@ public abstract class DatabaseClient implements ConfigurationReloadable {
                   RequestType.UPDATE, ImportRequestDto.Fields.scriptData.name()));
         }
       }
+      default -> {}
     }
   }
 

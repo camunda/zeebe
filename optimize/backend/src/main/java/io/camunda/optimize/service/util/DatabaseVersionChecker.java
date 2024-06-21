@@ -34,6 +34,7 @@ import org.opensearch.client.opensearch.OpenSearchClient;
 public abstract class DatabaseVersionChecker {
 
   @Getter
+  @SuppressWarnings("checkstyle:constantname")
   private static final EnumMap<Database, List<String>> databaseSupportedVersionsMap =
       new EnumMap<>(Database.class);
 
@@ -93,9 +94,9 @@ public abstract class DatabaseVersionChecker {
       final String currentVersion, final String latestSupportedVersion) {
     try {
       return (Integer.parseInt(getMajorVersionFrom(currentVersion))
-              == Integer.parseInt(getMajorVersionFrom(latestSupportedVersion)))
+          == Integer.parseInt(getMajorVersionFrom(latestSupportedVersion)))
           && (Integer.parseInt(getMinorVersionFrom(currentVersion))
-              > Integer.parseInt(getMinorVersionFrom(latestSupportedVersion)));
+          > Integer.parseInt(getMinorVersionFrom(latestSupportedVersion)));
     } catch (final NumberFormatException exception) {
       throw new OptimizeConfigurationException(
           String.format(
@@ -126,7 +127,7 @@ public abstract class DatabaseVersionChecker {
 
                 return currentMajorAndMinor.equals(neededMajorAndMinor)
                     && Integer.parseInt(getPatchVersionFrom(currentVersion))
-                        >= Integer.parseInt(getPatchVersionFrom(neededVersion));
+                    >= Integer.parseInt(getPatchVersionFrom(neededVersion));
               });
     } catch (final NumberFormatException exception) {
       throw new OptimizeConfigurationException("Was not able to determine Database version");

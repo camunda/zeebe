@@ -47,6 +47,7 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.xcontent.XContentType;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("checkstyle:methodname")
 public class UpgradeStepsIT extends AbstractUpgradeIT {
 
   private static final String FROM_VERSION = "2.6.0";
@@ -56,7 +57,7 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
   @Test
   public void executeCreateIndexWithAliasStep() throws Exception {
     // given
-    UpgradePlan upgradePlan =
+    final UpgradePlan upgradePlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(FROM_VERSION)
             .toVersion(TO_VERSION)
@@ -71,13 +72,13 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
         indexNameService.getOptimizeIndexNameWithVersionForAllIndicesOf(
             TEST_INDEX_WITH_UPDATED_MAPPING_V2);
     assertThat(
-            prefixAwareClient
-                .getHighLevelClient()
-                .indices()
-                .exists(
-                    new GetIndexRequest(versionedIndexName)
-                        .features(GetIndexRequest.Feature.MAPPINGS),
-                    prefixAwareClient.requestOptions()))
+        prefixAwareClient
+            .getHighLevelClient()
+            .indices()
+            .exists(
+                new GetIndexRequest(versionedIndexName)
+                    .features(GetIndexRequest.Feature.MAPPINGS),
+                prefixAwareClient.requestOptions()))
         .isTrue();
     final GetAliasesResponse alias =
         getAliasesForAlias(
@@ -89,7 +90,7 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
   @Test
   public void executeCreateTemplateBasedIndexWithAliasStep() throws Exception {
     // given
-    UpgradePlan upgradePlan =
+    final UpgradePlan upgradePlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(FROM_VERSION)
             .toVersion(TO_VERSION)
@@ -103,13 +104,13 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
     final String versionedIndexName =
         indexNameService.getOptimizeIndexNameWithVersion(TEST_INDEX_WITH_TEMPLATE_V1);
     assertThat(
-            prefixAwareClient
-                .getHighLevelClient()
-                .indices()
-                .exists(
-                    new GetIndexRequest(versionedIndexName)
-                        .features(GetIndexRequest.Feature.MAPPINGS),
-                    prefixAwareClient.requestOptions()))
+        prefixAwareClient
+            .getHighLevelClient()
+            .indices()
+            .exists(
+                new GetIndexRequest(versionedIndexName)
+                    .features(GetIndexRequest.Feature.MAPPINGS),
+                prefixAwareClient.requestOptions()))
         .isTrue();
     final GetAliasesResponse alias =
         getAliasesForAlias(
@@ -122,7 +123,7 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
   @Test
   public void executeUpdateIndexStep() {
     // given
-    UpgradePlan upgradePlan =
+    final UpgradePlan upgradePlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(FROM_VERSION)
             .toVersion(TO_VERSION)
@@ -145,7 +146,7 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
         indexNameService.getOptimizeIndexAliasForIndex(TEST_INDEX_V1.getIndexName());
     createIndexWithoutWriteIndexFlagOnAlias(aliasForIndex);
 
-    UpgradePlan upgradePlan =
+    final UpgradePlan upgradePlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(FROM_VERSION)
             .toVersion(TO_VERSION)
@@ -168,7 +169,7 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
   @Test
   public void executeUpdateIndexWithAliasFromTemplateStep() {
     // given
-    UpgradePlan upgradePlan =
+    final UpgradePlan upgradePlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(FROM_VERSION)
             .toVersion(TO_VERSION)
@@ -189,13 +190,13 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
   @SneakyThrows
   @Test
   public void
-      executeUpdateIndexFromTemplateStep_preexistingIndexWasNotFromTemplateAndLackedAliasWriteIndexFlag() {
+  executeUpdateIndexFromTemplateStep_preexistingIndexWasNotFromTemplateAndLackedAliasWriteIndexFlag() {
     // given
     final String aliasForIndex =
         indexNameService.getOptimizeIndexAliasForIndex(TEST_INDEX_V1.getIndexName());
     createIndexWithoutWriteIndexFlagOnAlias(aliasForIndex);
 
-    UpgradePlan upgradePlan =
+    final UpgradePlan upgradePlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(FROM_VERSION)
             .toVersion(TO_VERSION)
@@ -221,7 +222,7 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
   @SneakyThrows
   @Test
   public void
-      executeUpdateIndexFromTemplateStep_preexistingIndexWasNotFromTemplateAndHadWriteAndReadAlias() {
+  executeUpdateIndexFromTemplateStep_preexistingIndexWasNotFromTemplateAndHadWriteAndReadAlias() {
     // given
     final String aliasForIndex =
         indexNameService.getOptimizeIndexAliasForIndex(TEST_INDEX_V1.getIndexName());
@@ -238,7 +239,7 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
         .indices()
         .create(request, prefixAwareClient.requestOptions());
 
-    UpgradePlan upgradePlan =
+    final UpgradePlan upgradePlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(FROM_VERSION)
             .toVersion(TO_VERSION)
@@ -271,7 +272,7 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
   @Test
   public void executeUpdateIndexWithTemplateAfterRolloverStep() {
     // given rolled over users index
-    UpgradePlan buildIndexPlan =
+    final UpgradePlan buildIndexPlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(FROM_VERSION)
             .toVersion(INTERMEDIATE_VERSION)
@@ -282,7 +283,7 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
 
     prefixAwareClient.triggerRollover(TEST_INDEX_WITH_TEMPLATE_V1.getIndexName(), 0);
 
-    UpgradePlan upgradePlan =
+    final UpgradePlan upgradePlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(INTERMEDIATE_VERSION)
             .toVersion(TO_VERSION)
@@ -310,21 +311,21 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
     assertThat(indicesWithWriteAlias.get(0)).contains(expectedSuffixAfterRollover);
     // old template is gone
     assertThat(
-            prefixAwareClient
-                .getHighLevelClient()
-                .indices()
-                .existsTemplate(
-                    new IndexTemplatesExistRequest(
-                        indexNameService.getOptimizeIndexTemplateNameWithVersion(
-                            TEST_INDEX_WITH_TEMPLATE_V1)),
-                    prefixAwareClient.requestOptions()))
+        prefixAwareClient
+            .getHighLevelClient()
+            .indices()
+            .existsTemplate(
+                new IndexTemplatesExistRequest(
+                    indexNameService.getOptimizeIndexTemplateNameWithVersion(
+                        TEST_INDEX_WITH_TEMPLATE_V1)),
+                prefixAwareClient.requestOptions()))
         .isFalse();
   }
 
   @Test
   public void executeInsertDataStep() throws Exception {
     // given
-    UpgradePlan upgradePlan =
+    final UpgradePlan upgradePlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(FROM_VERSION)
             .toVersion(TO_VERSION)
@@ -349,7 +350,7 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
   @Test
   public void executeUpdateDataStep() throws Exception {
     // given
-    UpgradePlan upgradePlan =
+    final UpgradePlan upgradePlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(FROM_VERSION)
             .toVersion(TO_VERSION)
@@ -374,7 +375,7 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
   @Test
   public void executeDeleteDataStep() throws Exception {
     // given
-    UpgradePlan upgradePlan =
+    final UpgradePlan upgradePlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(FROM_VERSION)
             .toVersion(TO_VERSION)
@@ -395,7 +396,7 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
   @Test
   public void executeDeleteIndexStep() throws Exception {
     // given
-    UpgradePlan upgradePlan =
+    final UpgradePlan upgradePlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(FROM_VERSION)
             .toVersion(TO_VERSION)
@@ -413,7 +414,7 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
   @Test
   public void executeDeleteIndexStep_rolledOverIndex() throws Exception {
     // given rolled over users index
-    UpgradePlan buildIndexPlan =
+    final UpgradePlan buildIndexPlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(FROM_VERSION)
             .toVersion(INTERMEDIATE_VERSION)
@@ -430,7 +431,7 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
     final GetIndexResponse response = getIndicesForMapping(TEST_INDEX_WITH_TEMPLATE_V1);
     assertThat(response.getIndices()).hasSize(2);
 
-    UpgradePlan upgradePlan =
+    final UpgradePlan upgradePlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(INTERMEDIATE_VERSION)
             .toVersion(TO_VERSION)
@@ -448,7 +449,7 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
   @Test
   public void executeUpgradeMappingIndexStep() throws Exception {
     // given
-    UpgradePlan upgradePlan =
+    final UpgradePlan upgradePlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(FROM_VERSION)
             .toVersion(TO_VERSION)
@@ -469,14 +470,14 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
     // given
     createOptimizeIndexWithTypeAndVersion(new RenameFieldTestIndex(), 1);
 
-    IndexRequest indexRequest =
+    final IndexRequest indexRequest =
         new IndexRequest("users").source("{\"name\": \"yuri_loza\"}", XContentType.JSON);
 
     prefixAwareClient.index(indexRequest);
 
     prefixAwareClient.refresh(new RefreshRequest("*"));
 
-    UpgradePlan upgradePlan =
+    final UpgradePlan upgradePlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(FROM_VERSION)
             .toVersion(TO_VERSION)
@@ -491,7 +492,7 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
   @Test
   public void versionIsUpdatedAfterPlanWasExecuted() throws Exception {
     // given
-    UpgradePlan upgradePlan =
+    final UpgradePlan upgradePlan =
         UpgradePlanBuilder.createUpgradePlan()
             .fromVersion(FROM_VERSION)
             .toVersion(TO_VERSION)
@@ -543,9 +544,9 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
 
   @SuppressWarnings(UNCHECKED_CAST)
   private Map<String, Object> getMappingFields() throws IOException {
-    GetMappingsRequest request = new GetMappingsRequest();
+    final GetMappingsRequest request = new GetMappingsRequest();
     request.indices(TEST_INDEX_WITH_UPDATED_MAPPING_V2.getIndexName());
-    GetMappingsResponse getMappingResponse = prefixAwareClient.getMapping(request);
+    final GetMappingsResponse getMappingResponse = prefixAwareClient.getMapping(request);
     final Object propertiesMap =
         getMappingResponse.mappings().values().stream()
             .findFirst()
@@ -569,11 +570,12 @@ public class UpgradeStepsIT extends AbstractUpgradeIT {
   }
 
   private Map<String, Set<AliasMetadata>> getAliasMap(final String aliasName) {
-    GetAliasesRequest aliasesRequest = new GetAliasesRequest().aliases(aliasName);
+    final GetAliasesRequest aliasesRequest = new GetAliasesRequest().aliases(aliasName);
     try {
       return prefixAwareClient.getAlias(aliasesRequest).getAliases();
-    } catch (IOException e) {
-      String message = String.format("Could not retrieve alias map for alias {%s}.", aliasName);
+    } catch (final IOException e) {
+      final String message = String.format("Could not retrieve alias map for alias {%s}.",
+          aliasName);
       throw new OptimizeRuntimeException(message, e);
     }
   }

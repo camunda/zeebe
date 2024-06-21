@@ -18,18 +18,18 @@ import lombok.experimental.FieldNameConstants;
 @EqualsAndHashCode(callSuper = true)
 @FieldNameConstants
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(force = true)
 public class ProcessDigestDto extends ProcessDigestResponseDto {
-
-  /** Needed to inherit field name constants from {@link ProcessDigestResponseDto} */
-  public static class Fields extends ProcessDigestResponseDto.Fields {}
 
   // This is the baseline results, or in other words the results that were included in the
   // previously sent digest
-  private Map<String, String> kpiReportResults;
+  private final Map<String, String> kpiReportResults;
 
   public ProcessDigestDto(final Boolean enabled, final Map<String, String> kpiReportResults) {
     super(enabled);
     this.kpiReportResults = kpiReportResults;
   }
+
+  /** Needed to inherit field name constants from {@link ProcessDigestResponseDto} */
+  public static class Fields extends ProcessDigestResponseDto.Fields {}
 }

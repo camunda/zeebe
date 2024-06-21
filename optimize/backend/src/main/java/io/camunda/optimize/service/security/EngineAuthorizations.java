@@ -18,9 +18,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Data
 public class EngineAuthorizations {
+
   private final String engine;
   private List<AuthorizationDto> globalAuthorizations = new ArrayList<>();
   private List<AuthorizationDto> groupAuthorizations = new ArrayList<>();
   private List<AuthorizationDto> userAuthorizations = new ArrayList<>();
-  ;
 }

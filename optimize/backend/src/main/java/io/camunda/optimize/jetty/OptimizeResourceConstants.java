@@ -30,22 +30,24 @@ public class OptimizeResourceConstants implements ConfigurationReloadable {
       ImmutableList.<String>builder().add(INDEX_PAGE).add(INDEX_HTML_PAGE).build();
   public static final String ACTUATOR_PORT_PROPERTY_KEY = "management.server.port";
   public static final String ACTUATOR_PORT_DEFAULT = "8092";
+  @SuppressWarnings("checkstyle:staticvariablename")
   public static String ACTUATOR_ENDPOINT;
+  @SuppressWarnings("checkstyle:staticvariablename")
   public static int ACTUATOR_PORT;
 
   @Value("${management.endpoints.web.base-path:/actuator}")
-  public void setActuatorEndpointStatic(String endpoint) {
+  public void setActuatorEndpointStatic(final String endpoint) {
     OptimizeResourceConstants.ACTUATOR_ENDPOINT = endpoint;
   }
 
   @Value("${" + ACTUATOR_PORT_PROPERTY_KEY + ":" + ACTUATOR_PORT_DEFAULT + "}")
-  public void setActuatorPortStatic(int port) {
+  public void setActuatorPortStatic(final int port) {
     OptimizeResourceConstants.ACTUATOR_PORT = port;
   }
 
   @Override
-  public void reloadConfiguration(ApplicationContext context) {
-    String configuredPort =
+  public void reloadConfiguration(final ApplicationContext context) {
+    final String configuredPort =
         context.getEnvironment().getProperty(ACTUATOR_PORT_PROPERTY_KEY, ACTUATOR_PORT_DEFAULT);
     try {
       setActuatorPortStatic(Integer.parseInt(configuredPort));

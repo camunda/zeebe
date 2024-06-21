@@ -312,28 +312,6 @@ public class OptimizeElasticsearchClient extends DatabaseClient {
     return highLevelClient.mget(multiGetRequest, requestOptions());
   }
 
-  @Override
-  public final SearchResponse scroll(final SearchScrollRequest searchScrollRequest)
-      throws IOException {
-    // nothing to modify here, still exposing to not force usage of highLevelClient for this common
-    // use case
-    return highLevelClient.scroll(searchScrollRequest, requestOptions());
-  }
-
-  @Override
-  public final ClearScrollResponse clearScroll(final ClearScrollRequest clearScrollRequest)
-      throws IOException {
-    // nothing to modify here, still exposing to not force usage of highLevelClient for this common
-    // use case
-    return highLevelClient.clearScroll(clearScrollRequest, requestOptions());
-  }
-
-  @Override
-  public final SearchResponse search(final SearchRequest searchRequest) throws IOException {
-    applyIndexPrefixes(searchRequest);
-    return highLevelClient.search(searchRequest, requestOptions());
-  }
-
   public final UpdateResponse update(final UpdateRequest updateRequest) throws IOException {
     applyIndexPrefix(updateRequest);
 
@@ -346,32 +324,6 @@ public class OptimizeElasticsearchClient extends DatabaseClient {
     return highLevelClient.updateByQuery(updateByQueryRequest, requestOptions());
   }
 
-  @Override
-  public void update(final String indexName, final String entityId, final ScriptData script) {
-
-    final UpdateRequest updateRequest =
-        new UpdateRequest()
-            .index(indexName)
-            .id(entityId)
-            .script(
-                new Script(
-                    ScriptType.INLINE,
-                    Script.DEFAULT_SCRIPT_LANG,
-                    script.scriptString(),
-                    script.params()))
-            .retryOnConflict(NUMBER_OF_RETRIES_ON_CONFLICT);
-    try {
-      update(updateRequest);
-    } catch (final IOException e) {
-      final String errorMessage =
-          String.format(
-              "The error occurs while updating OpenSearch entity %s with id %s",
-              indexName, entityId);
-      log.error(errorMessage, e);
-      throw new OptimizeRuntimeException(errorMessage, e);
-    }
-  }
-
   public final RolloverResponse rollover(RolloverRequest rolloverRequest) throws IOException {
     rolloverRequest = applyAliasPrefixAndRolloverConditions(rolloverRequest);
     return highLevelClient.indices().rollover(rolloverRequest, requestOptions());
@@ -382,28 +334,6 @@ public class OptimizeElasticsearchClient extends DatabaseClient {
     deleteIndex(indexAlias);
   }
 
-  @Override
-  public void deleteIndex(final String indexAlias) {
-    final String[] allIndicesForAlias = getAllIndicesForAlias(indexAlias).toArray(String[]::new);
-    deleteIndexByRawIndexNames(allIndicesForAlias);
-  }
-
-  @Override
-  public Set<String> getAllIndicesForAlias(final String aliasName) {
-    final GetAliasesRequest aliasesRequest = new GetAliasesRequest().aliases(aliasName);
-    try {
-      return highLevelClient
-          .indices()
-          .getAlias(aliasesRequest, requestOptions())
-          .getAliases()
-          .keySet();
-    } catch (final Exception e) {
-      final String message =
-          String.format("Could not retrieve index names for alias {%s}.", aliasName);
-      throw new OptimizeRuntimeException(message, e);
-    }
-  }
-
   public void refresh(final RefreshRequest refreshRequest) {
     applyIndexPrefixes(refreshRequest);
     try {
@@ -412,17 +342,6 @@ public class OptimizeElasticsearchClient extends DatabaseClient {
       log.error("Could not refresh Optimize indexes!", e);
       throw new OptimizeRuntimeException("Could not refresh Optimize indexes!", e);
     }
-  }
-
-  @Override
-  public String getDatabaseVersion() throws IOException {
-    return highLevelClient.info(requestOptions()).getVersion().getNumber();
-  }
-
-  @Override
-  @SneakyThrows
-  public void setDefaultRequestOptions() {
-    highLevelClient.info(RequestOptions.DEFAULT);
   }
 
   public <T> void doImportBulkRequestWithList(
@@ -437,25 +356,6 @@ public class OptimizeElasticsearchClient extends DatabaseClient {
       entityCollection.forEach(dto -> addDtoToRequestConsumer.accept(bulkRequest, dto));
       doBulkRequest(bulkRequest, importItemName, retryRequestIfNestedDocLimitReached);
     }
-  }
-
-  @Override
-  public void executeImportRequestsAsBulk(
-      final String bulkRequestName,
-      final List<ImportRequestDto> importRequestDtos,
-      final Boolean retryFailedRequestsOnNestedDocLimit) {
-    final BulkRequest bulkRequest = new BulkRequest();
-    final Map<String, List<ImportRequestDto>> requestsByType =
-        importRequestDtos.stream()
-            .filter(this::validateImportName)
-            .collect(groupingBy(ImportRequestDto::getImportName));
-    requestsByType.forEach(
-        (type, requests) -> {
-          log.debug("Adding [{}] requests of type {} to bulk request", requests.size(), type);
-          requests.forEach(
-              importRequest -> applyOperationToBulkRequest(bulkRequest, importRequest));
-        });
-    doBulkRequest(bulkRequest, bulkRequestName, retryFailedRequestsOnNestedDocLimit);
   }
 
   private void applyOperationToBulkRequest(
@@ -481,6 +381,7 @@ public class OptimizeElasticsearchClient extends DatabaseClient {
                           requestDto.getScriptData().scriptString(),
                           requestDto.getScriptData().params()))
                   .retryOnConflict(requestDto.getRetryNumberOnConflict()));
+      default -> {}
     }
   }
 
@@ -534,44 +435,45 @@ public class OptimizeElasticsearchClient extends DatabaseClient {
 
   private void doBulkRequestWithNestedDocHandling(
       final BulkRequest bulkRequest, final String itemName) {
-    if (bulkRequest.numberOfActions() > 0) {
-      log.info("Executing bulk request on {} items of {}", bulkRequest.requests().size(), itemName);
-      try {
-        final BulkResponse bulkResponse = bulk(bulkRequest);
-        if (bulkResponse.hasFailures()) {
-          if (containsNestedDocumentLimitErrorMessage(bulkResponse)) {
-            final Set<String> failedItemIds =
-                Arrays.stream(bulkResponse.getItems())
-                    .filter(BulkItemResponse::isFailed)
-                    .filter(
-                        responseItem ->
-                            responseItem.getFailureMessage().contains(NESTED_DOC_LIMIT_MESSAGE))
-                    .map(BulkItemResponse::getId)
-                    .collect(Collectors.toSet());
-            log.warn(
-                "There were failures while performing bulk on {} due to the nested document limit being reached."
-                    + " Removing {} failed items and retrying",
-                itemName,
-                failedItemIds.size());
-            bulkRequest.requests().removeIf(request -> failedItemIds.contains(request.id()));
-            if (!bulkRequest.requests().isEmpty()) {
-              doBulkRequestWithNestedDocHandling(bulkRequest, itemName);
-            }
-          } else {
-            throw new OptimizeRuntimeException(
-                String.format(
-                    "There were failures while performing bulk on %s. Message: %s",
-                    itemName, bulkResponse.buildFailureMessage()));
-          }
-        }
-      } catch (final IOException e) {
-        final String reason =
-            String.format("There were errors while performing a bulk on %s.", itemName);
-        log.error(reason, e);
-        throw new OptimizeRuntimeException(reason, e);
-      }
-    } else {
+    if (bulkRequest.numberOfActions() <= 0) {
       log.debug("Bulkrequest on {} not executed because it contains no actions.", itemName);
+      return;
+    }
+
+    log.info("Executing bulk request on {} items of {}", bulkRequest.requests().size(), itemName);
+    try {
+      final BulkResponse bulkResponse = bulk(bulkRequest);
+      if (bulkResponse.hasFailures()) {
+        if (containsNestedDocumentLimitErrorMessage(bulkResponse)) {
+          final Set<String> failedItemIds =
+              Arrays.stream(bulkResponse.getItems())
+                  .filter(BulkItemResponse::isFailed)
+                  .filter(
+                      responseItem ->
+                          responseItem.getFailureMessage().contains(NESTED_DOC_LIMIT_MESSAGE))
+                  .map(BulkItemResponse::getId)
+                  .collect(Collectors.toSet());
+          log.warn(
+              "There were failures while performing bulk on {} due to the nested document limit being reached."
+                  + " Removing {} failed items and retrying",
+              itemName,
+              failedItemIds.size());
+          bulkRequest.requests().removeIf(request -> failedItemIds.contains(request.id()));
+          if (!bulkRequest.requests().isEmpty()) {
+            doBulkRequestWithNestedDocHandling(bulkRequest, itemName);
+          }
+        } else {
+          throw new OptimizeRuntimeException(
+              String.format(
+                  "There were failures while performing bulk on %s. Message: %s",
+                  itemName, bulkResponse.buildFailureMessage()));
+        }
+      }
+    } catch (final IOException e) {
+      final String reason =
+          String.format("There were errors while performing a bulk on %s.", itemName);
+      log.error(reason, e);
+      throw new OptimizeRuntimeException(reason, e);
     }
   }
 
@@ -775,11 +677,20 @@ public class OptimizeElasticsearchClient extends DatabaseClient {
                         .collect(Collectors.toSet())));
   }
 
-  public final GetAliasesResponse getAlias(final GetAliasesRequest getAliasesRequest)
-      throws IOException {
-    getAliasesRequest.indices(convertToPrefixedAliasNames(getAliasesRequest.indices()));
-    getAliasesRequest.aliases(convertToPrefixedAliasNames(getAliasesRequest.aliases()));
-    return highLevelClient.indices().getAlias(getAliasesRequest, requestOptions());
+  @Override
+  public Set<String> getAllIndicesForAlias(final String aliasName) {
+    final GetAliasesRequest aliasesRequest = new GetAliasesRequest().aliases(aliasName);
+    try {
+      return highLevelClient
+          .indices()
+          .getAlias(aliasesRequest, requestOptions())
+          .getAliases()
+          .keySet();
+    } catch (final Exception e) {
+      final String message =
+          String.format("Could not retrieve index names for alias {%s}.", aliasName);
+      throw new OptimizeRuntimeException(message, e);
+    }
   }
 
   @Override
@@ -806,6 +717,12 @@ public class OptimizeElasticsearchClient extends DatabaseClient {
   }
 
   @Override
+  public void deleteIndex(final String indexAlias) {
+    final String[] allIndicesForAlias = getAllIndicesForAlias(indexAlias).toArray(String[]::new);
+    deleteIndexByRawIndexNames(allIndicesForAlias);
+  }
+
+  @Override
   public <T> long count(final String[] indexNames, final T query) throws IOException {
     final CountRequest countRequest = new CountRequest(indexNames);
     if (query instanceof final QueryBuilder elasticSearchQuery) {
@@ -817,6 +734,84 @@ public class OptimizeElasticsearchClient extends DatabaseClient {
               + "instead got "
               + query.getClass().getSimpleName());
     }
+  }
+
+  @Override
+  public final SearchResponse scroll(final SearchScrollRequest searchScrollRequest)
+      throws IOException {
+    // nothing to modify here, still exposing to not force usage of highLevelClient for this common
+    // use case
+    return highLevelClient.scroll(searchScrollRequest, requestOptions());
+  }
+
+  @Override
+  public final SearchResponse search(final SearchRequest searchRequest) throws IOException {
+    applyIndexPrefixes(searchRequest);
+    return highLevelClient.search(searchRequest, requestOptions());
+  }
+
+  @Override
+  public final ClearScrollResponse clearScroll(final ClearScrollRequest clearScrollRequest)
+      throws IOException {
+    // nothing to modify here, still exposing to not force usage of highLevelClient for this common
+    // use case
+    return highLevelClient.clearScroll(clearScrollRequest, requestOptions());
+  }
+
+  @Override
+  public String getDatabaseVersion() throws IOException {
+    return highLevelClient.info(requestOptions()).getVersion().getNumber();
+  }
+
+  @Override
+  @SneakyThrows
+  public void setDefaultRequestOptions() {
+    highLevelClient.info(RequestOptions.DEFAULT);
+  }
+
+  @Override
+  public void update(final String indexName, final String entityId, final ScriptData script) {
+
+    final UpdateRequest updateRequest =
+        new UpdateRequest()
+            .index(indexName)
+            .id(entityId)
+            .script(
+                new Script(
+                    ScriptType.INLINE,
+                    Script.DEFAULT_SCRIPT_LANG,
+                    script.scriptString(),
+                    script.params()))
+            .retryOnConflict(NUMBER_OF_RETRIES_ON_CONFLICT);
+    try {
+      update(updateRequest);
+    } catch (final IOException e) {
+      final String errorMessage =
+          String.format(
+              "The error occurs while updating OpenSearch entity %s with id %s",
+              indexName, entityId);
+      log.error(errorMessage, e);
+      throw new OptimizeRuntimeException(errorMessage, e);
+    }
+  }
+
+  @Override
+  public void executeImportRequestsAsBulk(
+      final String bulkRequestName,
+      final List<ImportRequestDto> importRequestDtos,
+      final Boolean retryFailedRequestsOnNestedDocLimit) {
+    final BulkRequest bulkRequest = new BulkRequest();
+    final Map<String, List<ImportRequestDto>> requestsByType =
+        importRequestDtos.stream()
+            .filter(this::validateImportName)
+            .collect(groupingBy(ImportRequestDto::getImportName));
+    requestsByType.forEach(
+        (type, requests) -> {
+          log.debug("Adding [{}] requests of type {} to bulk request", requests.size(), type);
+          requests.forEach(
+              importRequest -> applyOperationToBulkRequest(bulkRequest, importRequest));
+        });
+    doBulkRequest(bulkRequest, bulkRequestName, retryFailedRequestsOnNestedDocLimit);
   }
 
   @Override
@@ -860,6 +855,13 @@ public class OptimizeElasticsearchClient extends DatabaseClient {
   @Override
   public DatabaseType getDatabaseVendor() {
     return DatabaseType.ELASTICSEARCH;
+  }
+
+  public final GetAliasesResponse getAlias(final GetAliasesRequest getAliasesRequest)
+      throws IOException {
+    getAliasesRequest.indices(convertToPrefixedAliasNames(getAliasesRequest.indices()));
+    getAliasesRequest.aliases(convertToPrefixedAliasNames(getAliasesRequest.aliases()));
+    return highLevelClient.indices().getAlias(getAliasesRequest, requestOptions());
   }
 
   private QueryBuilder buildBasicSearchDefinitionQuery(
