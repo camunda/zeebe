@@ -40,10 +40,11 @@ import java.util.Properties;
 import java.util.concurrent.ScheduledExecutorService;
 
 @Deprecated
-public class ZeebeClientCloudBuilderImpl implements CamundaClientCloudBuilderStep1,
-    CamundaClientCloudBuilderStep2,
-    CamundaClientCloudBuilderStep3,
-    CamundaClientCloudBuilderStep4 {
+public class ZeebeClientCloudBuilderImpl
+    implements CamundaClientCloudBuilderStep1,
+        CamundaClientCloudBuilderStep2,
+        CamundaClientCloudBuilderStep3,
+        CamundaClientCloudBuilderStep4 {
 
   private static final String BASE_ADDRESS = "zeebe.camunda.io";
   private static final String BASE_AUTH_URL = "https://login.cloud.camunda.io/oauth/token";
@@ -338,19 +339,19 @@ public class ZeebeClientCloudBuilderImpl implements CamundaClientCloudBuilderSte
   private boolean isNeedToSetCloudGrpcAddress() {
     return innerBuilder.getGrpcAddress() == null
         || Objects.equals(
-        innerBuilder.getGrpcAddress(), CamundaClientBuilderImpl.DEFAULT_GRPC_ADDRESS);
+            innerBuilder.getGrpcAddress(), CamundaClientBuilderImpl.DEFAULT_GRPC_ADDRESS);
   }
 
   private boolean isNeedToSetCloudGatewayAddress() {
     return innerBuilder.getGatewayAddress() == null
         || Objects.equals(
-        innerBuilder.getGatewayAddress(), CamundaClientBuilderImpl.DEFAULT_GATEWAY_ADDRESS);
+            innerBuilder.getGatewayAddress(), CamundaClientBuilderImpl.DEFAULT_GATEWAY_ADDRESS);
   }
 
   private boolean isNeedToSetCloudRestAddress() {
     return innerBuilder.getRestAddress() == null
         || Objects.equals(
-        innerBuilder.getRestAddress(), CamundaClientBuilderImpl.DEFAULT_REST_ADDRESS);
+            innerBuilder.getRestAddress(), CamundaClientBuilderImpl.DEFAULT_REST_ADDRESS);
   }
 
   private URI getURIFromString(final String uri) {
