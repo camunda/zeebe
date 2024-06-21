@@ -27,6 +27,10 @@ on:
         type: boolean
         default: true
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
     name: Execute Release and Upload to Download Center
@@ -40,6 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4
         with:
+          ref: ${{ github.event.inputs.BRANCH || 'test-optimize-release'}}
           fetch-depth: 0
 
       - name: Import Secrets
@@ -160,74 +165,124 @@ jobs:
           username: ${{ steps.secrets.outputs.REGISTRY_HUB_DOCKER_COM_USR }}
           password: ${{ steps.secrets.outputs.REGISTRY_HUB_DOCKER_COM_PSW }}
 
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4
-        with:
-          ref: ${{ env.BRANCH }}
-          fetch-depth: 0
-
       - name: Configure GitHub user
         run: |
           git config --global user.name "github-optimize-app"
           git config --global user.email "ci@optimize.camunda.cloud"
 
-      - name: Prepare release
-        shell: bash
-        run: |
-          mvn -f optimize \
-            -DpushChanges=false \
-            -DskipTests=true \
-            -Prelease,engine-latest \
-            release:prepare \
-            -Dtag=${TAG} \
-            -DreleaseVersion="${RELEASE_VERSION}" \
-            -DdevelopmentVersion="${DEVELOPMENT_VERSION}" \
-            -Darguments="-Dmaven.deploy.skip=${IS_DRY_RUN} -DskipTests -DskipNexusStagingDeployMojo=${IS_DRY_RUN} -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -f pom.xml" \
-            -B \
-            --fail-at-end \
-            -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
-
-      - name: Push changes
-        if: env.IS_DRY_RUN == 'false'
-        shell: bash
-        run: |
-          git push --tags
-          git push --all
-
-      - name: Perform release
-        shell: bash
-        run: |
-          mvn -f optimize \
-            -DlocalCheckout=true \
-            -DskipTests=true \
-            -B \
-            --fail-at-end \
-            -Prelease,engine-latest \
-            -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
-            release:perform \
-            -Darguments="-Dmaven.deploy.skip=${IS_DRY_RUN} -DskipTests -DskipNexusStagingDeployMojo=${IS_DRY_RUN} -B --fail-at-end -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -f pom.xml"
-
-      - name: Remove tag for RC release
-        if: env.IS_RC == 'true'
-        run: |
-          git tag -d ${TAG}
-          git push origin :refs/tags/${TAG}
-
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4
-
-
-      # - name: Auto-update previous version
-      #   env:
-      #     GITHUB_ACTOR: ${{ github.actor }}
-      #     GITHUB_ACTOR_ID: ${{ github.actor_id }}
-      #     GITHUB_APP_PRIVATE_KEY: ${{ secrets.MONOREPO_APP_SECRET }}
-      #     GITHUB_APP_ID: ${{ secrets.MONOREPO_APP_ID }}
+      # - name: Prepare release
       #   run: |
-      #     git checkout ${{ github.ref_name }}
-      #     .github/scripts/c8/update-previous-version.sh
+      #     mvn -f optimize \
+      #       -DpushChanges=false \
+      #       -DskipTests=true \
+      #       -Prelease,engine-latest \
+      #       release:prepare \
+      #       -Dtag=${TAG} \
+      #       -DreleaseVersion="${RELEASE_VERSION}" \
+      #       -DdevelopmentVersion="${DEVELOPMENT_VERSION}" \
+      #       -Darguments="-Dmaven.deploy.skip=${IS_DRY_RUN} -DskipTests -DskipNexusStagingDeployMojo=${IS_DRY_RUN} -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -f pom.xml" \
+      #       -B \
+      #       --fail-at-end \
+      #       -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+
+      # - name: Push changes
+      #   if: env.IS_DRY_RUN == 'false'
+      #   run: |
+      #     git push --tags
+      #     git push --all
+
+      # - name: Perform release
+      #   run: |
+      #     mvn -f optimize \
+      #       -DlocalCheckout=true \
+      #       -DskipTests=true \
+      #       -B \
+      #       --fail-at-end \
+      #       -Prelease,engine-latest \
+      #       -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
+      #       release:perform \
+      #       -Darguments="-Dmaven.deploy.skip=${IS_DRY_RUN} -DskipTests -DskipNexusStagingDeployMojo=${IS_DRY_RUN} -B --fail-at-end -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -f pom.xml"
+
+      # - name: Remove tag for RC release
+      #   if: env.IS_RC == 'true'
+      #   run: |
+      #     git tag -d ${TAG}
+      #     git push origin :refs/tags/${TAG}
+
+      - name: Auto-update previous version
+        run: |
+          if [ "$IS_PATCH" = "false" ]; then
+            # only major / minor GA (.0) release versions will trigger an auto-update of previousVersion property.
+            echo "Auto-updating previousVersion property as release version is a valid major/minor version."
+            git fetch
+            git checkout ${BRANCH}
+            sed -i "s/project.previousVersion>.*</project.previousVersion>${RELEASE_VERSION}</g" pom.xml
+            git add pom.xml
+            # This is needed to not abort the job in case 'git diff' returns a status different from 0
+            set +e
+            git diff --staged --quiet
+            diff_result=$?
+            set -e
+
+            if [ $diff_result -ne 0 ]; then
+              git commit -m "chore: update previousVersion to new release version ${RELEASE_VERSION}"
+              echo "pushing to branch ${BRANCH}"
+              if [ "$IS_DRY_RUN" = "true" ]; then
+                echo "not pushing to branch ${BRANCH} in dry run mode"
+              else
+                echo "pushing to branch ${BRANCH}"
+                git push origin ${BRANCH}
+              fi
+            else
+              echo "Release version ${RELEASE_VERSION} did not change. Nothing to commit."
+            fi
+          else
+            echo "Not auto-updating previousVersion property as release version is not a valid major/minor version."
+          fi
 
       # - name: Build Docker Image
       #   run: |
-      #     .github/scripts/c8/build-release-docker-image.sh
+      #     tags=""
+
+      #     echo "Adding tags to release docker image..."
+
+      #     # Tagging the optimize release Docker image with the specified version
+      #     echo "Tagging optimize release docker image with version ${VERSION}"
+      #     tags=("${DOCKER_IMAGE_TEAM}:${VERSION}")
+      #     tags+=("${DOCKER_IMAGE_DOCKER_HUB}:${VERSION}")
+
+      #     # Major and minor versions are always tagged as the latest
+      #     if [ "${MAJOR_OR_MINOR}" = true ] || [ "${DOCKER_LATEST}" = true ]; then
+      #         echo "Tagging optimize release docker image with \`${DOCKER_LATEST_TAG}\`"
+      #         tags+=("${DOCKER_IMAGE_TEAM}:${DOCKER_LATEST_TAG}")
+      #         tags+=("${DOCKER_IMAGE_DOCKER_HUB}:${DOCKER_LATEST_TAG}")
+      #     fi
+
+      #     printf -v tag_arguments -- "-t %s " "${tags[@]}"
+      #     docker buildx create --use
+
+      #     export VERSION="${RELEASE_VERSION}"
+      #     export DATE="$(date +%FT%TZ)"
+      #     export REVISION="${REVISION}"
+      #     export BASE_IMAGE=docker.io/library/alpine:3.20.0
+
+      #     # if CI (GHA) export the variables for pushing in a later step
+      #     if [ "${CI}" = "true" ]; then
+      #         echo "DATE=$DATE" >>"$GITHUB_ENV"
+      #         echo "tag_arguments=$tag_arguments" >>"$GITHUB_ENV"
+      #     fi
+
+      #     docker buildx build \
+      #         ${tag_arguments} \
+      #         --build-arg VERSION="${RELEASE_VERSION}" \
+      #         --build-arg DATE="${DATE}" \
+      #         --build-arg REVISION="${REVISION}" \
+      #         --provenance false \
+      #         --load \
+      #         -f optimize.Dockerfile \
+      #         .
+
+      #     ./optimize/docker/test/verify.sh "${tags[@]}"
 
       # - name: Start Smoketest
       #   uses: ./.github/actions/compose
@@ -238,8 +293,7 @@ jobs:
       #     OPTIMIZE_IMAGE_TAG: ${{ github.event.inputs.RELEASE_VERSION }}
       #     ELASTIC_VERSION: ${{ steps.pom-info.outputs.x_elasticsearch8_test_version }}
       #     CAMBPM_HOST: "172.17.0.1"
-      #     CAMBPM_PORT:
-      #       "8080"
+      #     CAMBPM_PORT: "8080"
       # ^ starting ~2023-10-10, the hostname resolution for the cambpm docker-compose service
       # http://cambpm:8080 does not work anymore for neither SaaS nor self-hosted Linux runners.
       # 172.17.0.1 is the host IP address from the container perspective, and cambpm is running
