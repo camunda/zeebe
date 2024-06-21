@@ -167,8 +167,8 @@ jobs:
 
       - name: Configure GitHub user
         run: |
-          git config --global user.name "${{ github.actor }}"
-          git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          git config --global user.name "github-optimize-app"
+          git config --global user.email "ci@optimize.camunda.cloud"
 
       - name: Prepare release
         shell: bash
