@@ -170,20 +170,20 @@ jobs:
           git config --global user.name "github-optimize-app"
           git config --global user.email "ci@optimize.camunda.cloud"
 
-      # - name: Prepare release
-      #   run: |
-      #     mvn -f optimize \
-      #       -DpushChanges=false \
-      #       -DskipTests=true \
-      #       -Prelease,engine-latest \
-      #       release:prepare \
-      #       -Dtag=${TAG} \
-      #       -DreleaseVersion="${RELEASE_VERSION}" \
-      #       -DdevelopmentVersion="${DEVELOPMENT_VERSION}" \
-      #       -Darguments="-Dmaven.deploy.skip=${IS_DRY_RUN} -DskipTests -DskipNexusStagingDeployMojo=${IS_DRY_RUN} -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -f pom.xml" \
-      #       -B \
-      #       --fail-at-end \
-      #       -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+      - name: Prepare release
+        run: |
+          mvn -f optimize \
+            -DpushChanges=false \
+            -DskipTests=true \
+            -Prelease,engine-latest \
+            release:prepare \
+            -Dtag=${TAG} \
+            -DreleaseVersion="${RELEASE_VERSION}" \
+            -DdevelopmentVersion="${DEVELOPMENT_VERSION}" \
+            -Darguments="-Dmaven.deploy.skip=${IS_DRY_RUN} -DskipTests -DskipNexusStagingDeployMojo=${IS_DRY_RUN} -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -f pom.xml" \
+            -B \
+            --fail-at-end \
+            -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
 
       # - name: Push changes
       #   if: env.IS_DRY_RUN == 'false'
@@ -209,102 +209,102 @@ jobs:
       #     git tag -d ${TAG}
       #     git push origin :refs/tags/${TAG}
 
-      - name: Auto-update previous version
-        run: |
-          if [ "$IS_PATCH" = "false" ]; then
-            # only major / minor GA (.0) release versions will trigger an auto-update of previousVersion property.
-            echo "Auto-updating previousVersion property as release version is a valid major/minor version."
-            git fetch
-            git checkout ${BRANCH}
-            sed -i "s/project.previousVersion>.*</project.previousVersion>${RELEASE_VERSION}</g" pom.xml
-            git add pom.xml
-            # This is needed to not abort the job in case 'git diff' returns a status different from 0
-            set +e
-            git diff --staged --quiet
-            diff_result=$?
-            set -e
+      # - name: Auto-update previous version
+      #   run: |
+      #     if [ "$IS_PATCH" = "false" ]; then
+      #       # only major / minor GA (.0) release versions will trigger an auto-update of previousVersion property.
+      #       echo "Auto-updating previousVersion property as release version is a valid major/minor version."
+      #       git fetch
+      #       git checkout ${BRANCH}
+      #       sed -i "s/project.previousVersion>.*</project.previousVersion>${RELEASE_VERSION}</g" pom.xml
+      #       git add pom.xml
+      #       # This is needed to not abort the job in case 'git diff' returns a status different from 0
+      #       set +e
+      #       git diff --staged --quiet
+      #       diff_result=$?
+      #       set -e
 
-            if [ $diff_result -ne 0 ]; then
-              git commit -m "chore: update previousVersion to new release version ${RELEASE_VERSION}"
-              echo "pushing to branch ${BRANCH}"
-              if [ "$IS_DRY_RUN" = "true" ]; then
-                echo "not pushing to branch ${BRANCH} in dry run mode"
-              else
-                echo "pushing to branch ${BRANCH}"
-                git push origin ${BRANCH}
-              fi
-            else
-              echo "Release version ${RELEASE_VERSION} did not change. Nothing to commit."
-            fi
-          else
-            echo "Not auto-updating previousVersion property as release version is not a valid major/minor version."
+      #       if [ $diff_result -ne 0 ]; then
+      #         git commit -m "chore: update previousVersion to new release version ${RELEASE_VERSION}"
+      #         echo "pushing to branch ${BRANCH}"
+      #         if [ "$IS_DRY_RUN" = "true" ]; then
+      #           echo "not pushing to branch ${BRANCH} in dry run mode"
+      #         else
+      #           echo "pushing to branch ${BRANCH}"
+      #           git push origin ${BRANCH}
+      #         fi
+      #       else
+      #         echo "Release version ${RELEASE_VERSION} did not change. Nothing to commit."
+      #       fi
+      #     else
+      #       echo "Not auto-updating previousVersion property as release version is not a valid major/minor version."
+      #     fi
+
+      - name: Build Docker Image
+        run: |
+          tags=""
+
+          echo "Adding tags to release docker image..."
+
+          # Tagging the optimize release Docker image with the specified version
+          echo "Tagging optimize release docker image with version ${RELEASE_VERSION}"
+          tags=("${DOCKER_IMAGE_TEAM}:${RELEASE_VERSION}")
+          tags+=("${DOCKER_IMAGE_DOCKER_HUB}:${RELEASE_VERSION}")
+
+          # Major and minor versions are always tagged as the latest
+          if [ "${MAJOR_OR_MINOR}" = true ] || [ "${DOCKER_LATEST}" = true ]; then
+              echo "Tagging optimize release docker image with \`${DOCKER_LATEST_TAG}\`"
+              tags+=("${DOCKER_IMAGE_TEAM}:${DOCKER_LATEST_TAG}")
+              tags+=("${DOCKER_IMAGE_DOCKER_HUB}:${DOCKER_LATEST_TAG}")
           fi
 
-      # - name: Build Docker Image
-      #   run: |
-      #     tags=""
+          printf -v tag_arguments -- "-t %s " "${tags[@]}"
+          docker buildx create --use
 
-      #     echo "Adding tags to release docker image..."
+          export VERSION="${RELEASE_VERSION}"
+          export DATE="$(date +%FT%TZ)"
+          export REVISION="${REVISION}"
+          export BASE_IMAGE=docker.io/library/alpine:3.20.0
 
-      #     # Tagging the optimize release Docker image with the specified version
-      #     echo "Tagging optimize release docker image with version ${VERSION}"
-      #     tags=("${DOCKER_IMAGE_TEAM}:${VERSION}")
-      #     tags+=("${DOCKER_IMAGE_DOCKER_HUB}:${VERSION}")
+          # if CI (GHA) export the variables for pushing in a later step
+          if [ "${CI}" = "true" ]; then
+              echo "DATE=$DATE" >>"$GITHUB_ENV"
+              echo "tag_arguments=$tag_arguments" >>"$GITHUB_ENV"
+          fi
 
-      #     # Major and minor versions are always tagged as the latest
-      #     if [ "${MAJOR_OR_MINOR}" = true ] || [ "${DOCKER_LATEST}" = true ]; then
-      #         echo "Tagging optimize release docker image with \`${DOCKER_LATEST_TAG}\`"
-      #         tags+=("${DOCKER_IMAGE_TEAM}:${DOCKER_LATEST_TAG}")
-      #         tags+=("${DOCKER_IMAGE_DOCKER_HUB}:${DOCKER_LATEST_TAG}")
-      #     fi
+          docker buildx build \
+              ${tag_arguments} \
+              --build-arg VERSION="${RELEASE_VERSION}" \
+              --build-arg DATE="${DATE}" \
+              --build-arg REVISION="${REVISION}" \
+              --provenance false \
+              --load \
+              -f optimize.Dockerfile \
+              .
 
-      #     printf -v tag_arguments -- "-t %s " "${tags[@]}"
-      #     docker buildx create --use
+          ./optimize/docker/test/verify.sh "${tags[@]}"
 
-      #     export VERSION="${RELEASE_VERSION}"
-      #     export DATE="$(date +%FT%TZ)"
-      #     export REVISION="${REVISION}"
-      #     export BASE_IMAGE=docker.io/library/alpine:3.20.0
-
-      #     # if CI (GHA) export the variables for pushing in a later step
-      #     if [ "${CI}" = "true" ]; then
-      #         echo "DATE=$DATE" >>"$GITHUB_ENV"
-      #         echo "tag_arguments=$tag_arguments" >>"$GITHUB_ENV"
-      #     fi
-
-      #     docker buildx build \
-      #         ${tag_arguments} \
-      #         --build-arg VERSION="${RELEASE_VERSION}" \
-      #         --build-arg DATE="${DATE}" \
-      #         --build-arg REVISION="${REVISION}" \
-      #         --provenance false \
-      #         --load \
-      #         -f optimize.Dockerfile \
-      #         .
-
-      #     ./optimize/docker/test/verify.sh "${tags[@]}"
-
-      # - name: Start Smoketest
-      #   uses: ./.github/actions/compose
-      #   with:
-      #     compose_file: ${{ github.workspace }}/.github/actions/compose/docker-compose.smoketest.release.yml
-      #     project_name: smoketest
-      #   env:
-      #     OPTIMIZE_IMAGE_TAG: ${{ github.event.inputs.RELEASE_VERSION }}
-      #     ELASTIC_VERSION: ${{ steps.pom-info.outputs.x_elasticsearch8_test_version }}
-      #     CAMBPM_HOST: "172.17.0.1"
-      #     CAMBPM_PORT: "8080"
+      - name: Start Smoketest
+        uses: ./.github/actions/compose
+        with:
+          compose_file: ${{ github.workspace }}/.github/actions/compose/docker-compose.smoketest.release.yml
+          project_name: smoketest
+        env:
+          OPTIMIZE_IMAGE_TAG: ${{ env.RELEASE_VERSION }}
+          ELASTIC_VERSION: ${{ steps.pom-info.outputs.x_elasticsearch8_test_version }}
+          CAMBPM_HOST: "172.17.0.1"
+          CAMBPM_PORT: "8080"
       # ^ starting ~2023-10-10, the hostname resolution for the cambpm docker-compose service
       # http://cambpm:8080 does not work anymore for neither SaaS nor self-hosted Linux runners.
       # 172.17.0.1 is the host IP address from the container perspective, and cambpm is running
       # exposed there on port 8080.
 
-      # - name: Execute health check and push docker image
-      #   uses: ./.github/actions/execute-healthcheck-and-push-image
-      #   with:
-      #     version: ${{ env.RELEASE_VERSION }}
-      #     date: ${{ env.DATE }}
-      #     revision: ${{ env.REVISION }}
+      - name: Execute health check and push docker image
+        uses: ./.github/actions/execute-healthcheck-and-push-image
+        with:
+          version: ${{ env.RELEASE_VERSION }}
+          date: ${{ env.DATE }}
+          revision: ${{ env.REVISION }}
 
       # - name: Create a draft release
       #   if: env.IS_DRY_RUN == 'false' && env.IS_RC == 'false'
@@ -317,7 +317,7 @@ jobs:
       #     https://api.github.com/repos/${{ github.repository }}/releases \
       #     -d '{"tag_name":"${{ env.RELEASE_VERSION }}","target_commitish":"${{ github.sha }}","name":"${{ env.RELEASE_VERSION }}","body":${{ toJson(steps.changelog.outputs.changelog) }},"draft":true,"prerelease":${{ env.IS_ALPHA == 'true' }},"generate_release_notes":false,"make_latest":"${{ env.DOCKER_LATEST }}"}'
 
-      # - name: Docker log dump
-      #   uses: ./.github/actions/docker-logs
-      #   with:
-      #     archive_name: deploy-artifacts-docker
+      - name: Docker log dump
+        uses: ./.github/actions/docker-logs
+        with:
+          archive_name: deploy-artifacts-docker
