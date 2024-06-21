@@ -135,6 +135,7 @@ jobs:
             echo "IS_ALPHA=${{ steps.release-type.outputs.is_alpha }}"
             echo "IS_RC=${{ steps.release-type.outputs.is_rc }}"
             echo "IS_DRY_RUN=${{ github.event.inputs.IS_DRY_RUN || 'false' }}"
+            echo "TAG=${{ github.event.inputs.RELEASE_VERSION || '8.6.0-alpha3-rc1' }}-optimize-test"
           } >> "$GITHUB_ENV"
 
       # # When it's neither a dry run nor a release candidate it means we are running the workflow from the proper branch.
@@ -159,16 +160,33 @@ jobs:
           username: ${{ steps.secrets.outputs.REGISTRY_HUB_DOCKER_COM_USR }}
           password: ${{ steps.secrets.outputs.REGISTRY_HUB_DOCKER_COM_PSW }}
 
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4
+        with:
+          ref: ${{ env.BRANCH }}
+          fetch-depth: 0
+
+      - name: Configure GitHub user
+        run: |
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+
       - name: Prepare release
         shell: bash
-        env:
-          GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_ACTOR_ID: ${{ github.actor_id }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          .github/scripts/c8/prepare-release.sh
+          mvn -f optimize \
+            -DpushChanges=false \
+            -DskipTests=true \
+            -Prelease,engine-latest \
+            release:prepare \
+            -Dtag=${TAG} \
+            -DreleaseVersion="${RELEASE_VERSION}" \
+            -DdevelopmentVersion="${DEVELOPMENT_VERSION}" \
+            -Darguments="-Dmaven.deploy.skip=${IS_DRY_RUN} -DskipTests -DskipNexusStagingDeployMojo=${IS_DRY_RUN} -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -f pom.xml" \
+            -B \
+            --fail-at-end \
+            -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
 
-      - name: Push release
+      - name: Push changes
         if: env.IS_DRY_RUN == 'false'
         shell: bash
         run: |
@@ -177,12 +195,25 @@ jobs:
 
       - name: Perform release
         shell: bash
-        env:
-          GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_ACTOR_ID: ${{ github.actor_id }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          .github/scripts/c8/perform-release.sh
+          mvn -f optimize \
+            -DlocalCheckout=true \
+            -DskipTests=true \
+            -B \
+            --fail-at-end \
+            -Prelease,engine-latest \
+            -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
+            release:perform \
+            -Darguments="-Dmaven.deploy.skip=${IS_DRY_RUN} -DskipTests -DskipNexusStagingDeployMojo=${IS_DRY_RUN} -B --fail-at-end -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -f pom.xml"
+
+      - name: Remove tag for RC release
+        if: env.IS_RC == 'true'
+        run: |
+          git tag -d ${TAG}
+          git push origin :refs/tags/${TAG}
+
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4
+
 
       # - name: Auto-update previous version
       #   env:
