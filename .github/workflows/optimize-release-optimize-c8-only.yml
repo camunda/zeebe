@@ -43,9 +43,6 @@ jobs:
       fail-fast: true
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4
-        with:
-          ref: ${{ github.event.inputs.BRANCH || 'test-optimize-release'}}
-          fetch-depth: 0
 
       - name: Import Secrets
         id: secrets
@@ -146,6 +143,11 @@ jobs:
         with:
           username: ${{ steps.secrets.outputs.REGISTRY_HUB_DOCKER_COM_USR }}
           password: ${{ steps.secrets.outputs.REGISTRY_HUB_DOCKER_COM_PSW }}
+
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4
+        with:
+          ref: ${{ env.BRANCH }}
+          fetch-depth: 0
 
       - name: Configure GitHub user
         run: |
