@@ -273,6 +273,7 @@ jobs:
         with:
           compose_file: ${{ github.workspace }}/.github/actions/compose/docker-compose.smoketest.release.yml
           project_name: smoketest
+          timeout: 600
         env:
           OPTIMIZE_IMAGE_TAG: ${{ env.RELEASE_VERSION }}
           ELASTIC_VERSION: ${{ steps.pom-info.outputs.x_elasticsearch8_test_version }}
