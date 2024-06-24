@@ -294,6 +294,7 @@ jobs:
           revision: ${{ env.REVISION }}
 
       - name: Docker log dump
+        if: always()
         uses: ./.github/actions/docker-logs
         with:
           archive_name: deploy-artifacts-docker
