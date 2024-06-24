@@ -283,6 +283,9 @@ jobs:
       # 172.17.0.1 is the host IP address from the container perspective, and cambpm is running
       # exposed there on port 8080.
 
+      - name: Wait for Optimize to start
+        run: ./.github/scripts/wait-for.sh http://localhost:8090/ready
+
       - name: Execute health check and push docker image
         uses: ./.github/actions/execute-healthcheck-and-push-image
         with:
