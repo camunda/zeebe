@@ -28,9 +28,10 @@ import static io.camunda.zeebe.client.ClientProperties.USE_PLAINTEXT_CONNECTION;
 import static io.camunda.zeebe.client.impl.BuilderUtils.appendProperty;
 import static io.camunda.zeebe.client.impl.util.DataSizeUtil.ONE_MB;
 
-import io.camunda.zeebe.client.CamundaClient;
-import io.camunda.zeebe.client.CamundaClientBuilder;
-import io.camunda.zeebe.client.CamundaClientConfiguration;
+import io.camunda.client.CamundaClient;
+import io.camunda.client.CamundaClientBuilder;
+import io.camunda.client.CamundaClientConfiguration;
+import io.camunda.client.impl.CamundaClientImpl;
 import io.camunda.zeebe.client.ClientProperties;
 import io.camunda.zeebe.client.CredentialsProvider;
 import io.camunda.zeebe.client.api.JsonMapper;

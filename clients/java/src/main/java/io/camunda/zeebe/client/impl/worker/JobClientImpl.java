@@ -15,7 +15,7 @@
  */
 package io.camunda.zeebe.client.impl.worker;
 
-import io.camunda.zeebe.client.CamundaClientConfiguration;
+import io.camunda.client.CamundaClientConfiguration;
 import io.camunda.zeebe.client.CredentialsProvider.StatusCode;
 import io.camunda.zeebe.client.ZeebeClientConfiguration;
 import io.camunda.zeebe.client.api.JsonMapper;

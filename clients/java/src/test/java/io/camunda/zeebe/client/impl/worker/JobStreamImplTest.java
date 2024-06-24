@@ -17,9 +17,9 @@ package io.camunda.zeebe.client.impl.worker;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.camunda.client.impl.CamundaClientBuilderImpl;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.client.api.worker.JobClient;
-import io.camunda.zeebe.client.impl.CamundaClientBuilderImpl;
 import io.camunda.zeebe.client.impl.ZeebeObjectMapper;
 import io.camunda.zeebe.client.util.JsonUtil;
 import io.camunda.zeebe.gateway.protocol.GatewayGrpc;

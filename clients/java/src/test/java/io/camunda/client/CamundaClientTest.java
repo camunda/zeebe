@@ -13,8 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.camunda.zeebe.client;
+package io.camunda.client;
 
+import static io.camunda.client.impl.CamundaClientBuilderImpl.CA_CERTIFICATE_VAR;
+import static io.camunda.client.impl.CamundaClientBuilderImpl.DEFAULT_GATEWAY_ADDRESS;
+import static io.camunda.client.impl.CamundaClientBuilderImpl.DEFAULT_GRPC_ADDRESS;
+import static io.camunda.client.impl.CamundaClientBuilderImpl.DEFAULT_JOB_WORKER_TENANT_IDS_VAR;
+import static io.camunda.client.impl.CamundaClientBuilderImpl.DEFAULT_REST_ADDRESS;
+import static io.camunda.client.impl.CamundaClientBuilderImpl.DEFAULT_TENANT_ID_VAR;
+import static io.camunda.client.impl.CamundaClientBuilderImpl.GRPC_ADDRESS_VAR;
+import static io.camunda.client.impl.CamundaClientBuilderImpl.KEEP_ALIVE_VAR;
+import static io.camunda.client.impl.CamundaClientBuilderImpl.OVERRIDE_AUTHORITY_VAR;
+import static io.camunda.client.impl.CamundaClientBuilderImpl.PLAINTEXT_CONNECTION_VAR;
+import static io.camunda.client.impl.CamundaClientBuilderImpl.PREFER_REST_VAR;
+import static io.camunda.client.impl.CamundaClientBuilderImpl.REST_ADDRESS_VAR;
+import static io.camunda.client.impl.CamundaClientBuilderImpl.USE_DEFAULT_RETRY_POLICY_VAR;
+import static io.camunda.client.impl.CamundaClientBuilderImpl.ZEEBE_CLIENT_WORKER_STREAM_ENABLED;
 import static io.camunda.zeebe.client.ClientProperties.CLOUD_REGION;
 import static io.camunda.zeebe.client.ClientProperties.DEFAULT_JOB_WORKER_TENANT_IDS;
 import static io.camunda.zeebe.client.ClientProperties.DEFAULT_TENANT_ID;
@@ -22,20 +36,6 @@ import static io.camunda.zeebe.client.ClientProperties.MAX_MESSAGE_SIZE;
 import static io.camunda.zeebe.client.ClientProperties.STREAM_ENABLED;
 import static io.camunda.zeebe.client.ClientProperties.USE_DEFAULT_RETRY_POLICY;
 import static io.camunda.zeebe.client.ClientProperties.USE_PLAINTEXT_CONNECTION;
-import static io.camunda.zeebe.client.impl.CamundaClientBuilderImpl.CA_CERTIFICATE_VAR;
-import static io.camunda.zeebe.client.impl.CamundaClientBuilderImpl.DEFAULT_GATEWAY_ADDRESS;
-import static io.camunda.zeebe.client.impl.CamundaClientBuilderImpl.DEFAULT_GRPC_ADDRESS;
-import static io.camunda.zeebe.client.impl.CamundaClientBuilderImpl.DEFAULT_JOB_WORKER_TENANT_IDS_VAR;
-import static io.camunda.zeebe.client.impl.CamundaClientBuilderImpl.DEFAULT_REST_ADDRESS;
-import static io.camunda.zeebe.client.impl.CamundaClientBuilderImpl.DEFAULT_TENANT_ID_VAR;
-import static io.camunda.zeebe.client.impl.CamundaClientBuilderImpl.GRPC_ADDRESS_VAR;
-import static io.camunda.zeebe.client.impl.CamundaClientBuilderImpl.KEEP_ALIVE_VAR;
-import static io.camunda.zeebe.client.impl.CamundaClientBuilderImpl.OVERRIDE_AUTHORITY_VAR;
-import static io.camunda.zeebe.client.impl.CamundaClientBuilderImpl.PLAINTEXT_CONNECTION_VAR;
-import static io.camunda.zeebe.client.impl.CamundaClientBuilderImpl.PREFER_REST_VAR;
-import static io.camunda.zeebe.client.impl.CamundaClientBuilderImpl.REST_ADDRESS_VAR;
-import static io.camunda.zeebe.client.impl.CamundaClientBuilderImpl.USE_DEFAULT_RETRY_POLICY_VAR;
-import static io.camunda.zeebe.client.impl.CamundaClientBuilderImpl.ZEEBE_CLIENT_WORKER_STREAM_ENABLED;
 import static io.camunda.zeebe.client.impl.util.DataSizeUtil.ONE_MB;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -44,10 +44,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+import io.camunda.client.impl.CamundaClientBuilderImpl;
+import io.camunda.client.impl.CamundaClientCloudBuilderImpl;
+import io.camunda.zeebe.client.ClientProperties;
 import io.camunda.zeebe.client.api.command.CommandWithTenantStep;
 import io.camunda.zeebe.client.api.worker.JobWorker;
-import io.camunda.zeebe.client.impl.CamundaClientBuilderImpl;
-import io.camunda.zeebe.client.impl.CamundaClientCloudBuilderImpl;
 import io.camunda.zeebe.client.impl.NoopCredentialsProvider;
 import io.camunda.zeebe.client.impl.oauth.OAuthCredentialsProvider;
 import io.camunda.zeebe.client.impl.util.Environment;

@@ -17,6 +17,7 @@ package io.camunda.zeebe.client.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.camunda.client.impl.CamundaCallCredentials;
 import io.camunda.zeebe.client.CredentialsProvider;
 import io.camunda.zeebe.client.ZeebeClient;
 import io.camunda.zeebe.client.ZeebeClientConfiguration;
@@ -470,6 +471,11 @@ public class ZeebeClientImpl implements ZeebeClient {
     return new UnassignUserTaskCommandImpl(httpClient, userTaskKey);
   }
 
+  @Override
+  public ProcessInstanceQuery newProcessInstanceQuery() {
+    return new ProcessInstanceQueryImpl(httpClient, jsonMapper);
+  }
+
   private JobClient newJobClient() {
     return new JobClientImpl(
         asyncStub, config, jsonMapper, credentialsProvider::shouldRetryRequest);
@@ -514,10 +520,5 @@ public class ZeebeClientImpl implements ZeebeClient {
   public StreamJobsCommandStep1 newStreamJobsCommand() {
     return new StreamJobsCommandImpl(
         asyncStub, jsonMapper, credentialsProvider::shouldRetryRequest, config);
-  }
-
-  @Override
-  public ProcessInstanceQuery newProcessInstanceQuery() {
-    return new ProcessInstanceQueryImpl(httpClient, jsonMapper);
   }
 }
