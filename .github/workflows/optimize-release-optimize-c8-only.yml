@@ -1,4 +1,4 @@
-name: Optimize Release Camunda Optimize C8 to Camunda Nexus, DockerHub and internal Harbor registry.
+name: Optimize Release Camunda Optimize C8
 
 on:
   push:
@@ -33,7 +33,7 @@ defaults:
 
 jobs:
   build:
-    name: Execute Release and Upload to Download Center
+    name: Execute Release
     runs-on: gcp-core-2-release
     env:
       DOCKER_IMAGE_TEAM: registry.camunda.cloud/optimize-ee/optimize
@@ -78,7 +78,7 @@ jobs:
       - name: Is current release major or minor.
         id: release-type
         env:
-          RELEASE_VERSION: ${{ github.event.inputs.RELEASE_VERSION || '8.6.0-alpha3-rc3' }}
+          RELEASE_VERSION: ${{ github.event.inputs.RELEASE_VERSION || '0.0.0' }}
         run: |
           is_major_or_minor="false"
           is_patch="true"
@@ -119,16 +119,16 @@ jobs:
         run: |
           {
             echo "DOCKER_LATEST=${{ github.event.inputs.DOCKER_LATEST || false}}"
-            echo "DEVELOPMENT_VERSION=${{ github.event.inputs.DEVELOPMENT_VERSION || '8.6.0-SNAPSHOT' }}"
-            echo "RELEASE_VERSION=${{ github.event.inputs.RELEASE_VERSION || '8.6.0-alpha3-rc3' }}"
-            echo "BRANCH=${{ github.event.inputs.BRANCH || 'test-optimize-release' }}"
+            echo "DEVELOPMENT_VERSION=${{ github.event.inputs.DEVELOPMENT_VERSION || '0.1.0-SNAPSHOT' }}"
+            echo "RELEASE_VERSION=${{ github.event.inputs.RELEASE_VERSION || '0.0.0' }}"
+            echo "BRANCH=${{ github.event.inputs.BRANCH || github.ref_name }}"
             echo "REVISION=${{ steps.define-values.outputs.git_commit_hash }}"
             echo "MAJOR_OR_MINOR=${{ steps.release-type.outputs.is_major_or_minor }}"
             echo "IS_PATCH=${{ steps.release-type.outputs.is_patch }}"
             echo "IS_ALPHA=${{ steps.release-type.outputs.is_alpha }}"
             echo "IS_RC=${{ steps.release-type.outputs.is_rc }}"
-            echo "IS_DRY_RUN=${{ github.event.inputs.IS_DRY_RUN || 'false' }}"
-            echo "TAG=${{ github.event.inputs.RELEASE_VERSION || '8.6.0-alpha3-rc3' }}-optimize-test"
+            echo "IS_DRY_RUN=${{ github.event.inputs.IS_DRY_RUN || 'true' }}"
+            echo "TAG=${{ github.event.inputs.RELEASE_VERSION || '0.0.0' }}-optimize"
           } >> "$GITHUB_ENV"
 
       - name: Login to prod Harbor docker registry
@@ -144,14 +144,15 @@ jobs:
           username: ${{ steps.secrets.outputs.REGISTRY_HUB_DOCKER_COM_USR }}
           password: ${{ steps.secrets.outputs.REGISTRY_HUB_DOCKER_COM_PSW }}
 
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4
+      - name: Checkout release branch
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4
         with:
           ref: ${{ env.BRANCH }}
           fetch-depth: 0
 
       - name: Configure GitHub user
         run: |
-          git config --global user.name "github-optimize-app"
+          git config --global user.name "optimize-release"
           git config --global user.email "ci@optimize.camunda.cloud"
 
       - name: Prepare release
