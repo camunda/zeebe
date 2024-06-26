@@ -7,7 +7,7 @@
  */
 // TODO recreate C8 IT equivalent of this with #13337
 
-//package io.camunda.optimize.jetty;
+// package io.camunda.optimize.jetty;
 
 // import static io.camunda.optimize.AbstractIT.OPENSEARCH_PASSING;
 // import static io.camunda.optimize.OptimizeJettyServerCustomizer.EXTERNAL_SUB_PATH;
