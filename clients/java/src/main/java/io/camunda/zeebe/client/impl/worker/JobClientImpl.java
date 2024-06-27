@@ -52,6 +52,11 @@ public final class JobClientImpl implements JobClient {
     this.retryPredicate = retryPredicate;
   }
 
+  /**
+   * @deprecated since 8.6.0 for removal with 8.8.0, use {@link
+   *     JobClientImpl#JobClientImpl(GatewayStub asyncStub, CamundaClientConfiguration config,
+   *     JsonMapper jsonMapper, Predicate retryPredicate)}
+   */
   @Deprecated
   public JobClientImpl(
       final GatewayStub asyncStub,

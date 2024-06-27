@@ -70,6 +70,11 @@ public final class ActivateJobsCommandImpl
     customTenantIds = new HashSet<>();
   }
 
+  /**
+   * @deprecated since 8.6.0 for removal with 8.8.0, use {@link
+   *     ActivateJobsCommandImpl#ActivateJobsCommandImpl(GatewayStub asyncStub,
+   *     CamundaClientConfiguration config, JsonMapper jsonMapper, Predicate retryPredicate)}
+   */
   @Deprecated
   public ActivateJobsCommandImpl(
       final GatewayStub asyncStub,
@@ -131,6 +136,9 @@ public final class ActivateJobsCommandImpl
     return this;
   }
 
+  /**
+   * @deprecated since 8.6 for removal with 8.8, use {@link ActivateJobsCommandImpl#sendCommand()}
+   */
   @Override
   @Deprecated
   public ZeebeFuture<ActivateJobsResponse> send() {

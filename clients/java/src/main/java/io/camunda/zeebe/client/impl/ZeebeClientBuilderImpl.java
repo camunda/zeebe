@@ -50,6 +50,10 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ScheduledExecutorService;
 
+/**
+ * @deprecated since 8.6 for removal with 8.8, replaced by {@link
+ *     io.camunda.client.impl.CamundaClientBuilderImpl}
+ */
 @Deprecated
 public class ZeebeClientBuilderImpl implements CamundaClientBuilder, CamundaClientConfiguration {
 
