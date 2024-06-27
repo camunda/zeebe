@@ -7,11 +7,14 @@ Camunda 8 delivers scalable, on-demand process automation as a service. Camunda 
 Camunda 8 consists of six components:
 
 * [Console](https://docs.camunda.io/docs/components/console/introduction-to-console/) - Configure and deploy clusters with Console.
-* [Web Modeler](https://docs.camunda.io/docs/components/modeler/about-modeler/) - Collaborate, model processes, and deploy or start new instances.
+* Modelers 
+  * [Web Modeler](https://docs.camunda.io/docs/components/modeler/about-modeler/) - Web Application to model BPMN, DMN, & Forms and deploy or start new instances.
+  * [Desktop Modeler](https://docs.camunda.io/docs/next/components/modeler/desktop-modeler/) - Use Desktop Modeler as desktop application for modeling BPMN, DMN, and Forms with your local process application project.
 * [Zeebe](https://docs.camunda.io/docs/components/zeebe/zeebe-overview/) - The cloud-native process engine of Camunda 8.
 * [Tasklist](https://docs.camunda.io/docs/components/tasklist/introduction-to-tasklist/) - Complete tasks which require human input.
 * [Operate](https://docs.camunda.io/docs/components/operate/operate-introduction/) - Manage, monitor, and troubleshoot your processes.
 * [Optimize](https://docs.camunda.io/optimize/components/what-is-optimize/) - Improve your processes by identifying constraints in your system.
+* [Connectors](https://docs.camunda.io/docs/next/components/connectors/introduction-to-connectors/) - Integrate with an external system by using a Connector.
 
 Using Camunda 8, you can:
 
