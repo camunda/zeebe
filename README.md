@@ -4,7 +4,7 @@
 
 Camunda 8 delivers scalable, on-demand process automation as a service. Camunda 8 is combined with powerful execution engines for BPMN processes and DMN decisions, and paired with tools for collaborative modeling, operations, and analytics.
 
-Camunda 8 consists of six components:
+Camunda 8 consists of several components:
 
 * [Console](https://docs.camunda.io/docs/components/console/introduction-to-console/) - Configure and deploy clusters with Console.
 * Modelers 
