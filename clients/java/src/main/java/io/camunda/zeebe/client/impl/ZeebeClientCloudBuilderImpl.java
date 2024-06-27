@@ -217,7 +217,8 @@ public class ZeebeClientCloudBuilderImpl
   }
 
   @Override
-  public CamundaClientCloudBuilderStep4 credentialsProvider(final CredentialsProvider credentialsProvider) {
+  public CamundaClientCloudBuilderStep4 credentialsProvider(
+      final CredentialsProvider credentialsProvider) {
     innerBuilder.credentialsProvider(credentialsProvider);
     return this;
   }
