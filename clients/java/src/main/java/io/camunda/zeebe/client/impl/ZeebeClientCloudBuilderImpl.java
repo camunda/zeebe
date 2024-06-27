@@ -122,7 +122,7 @@ public class ZeebeClientCloudBuilderImpl
   }
 
   @Override
-  public CamundaClientBuilder gatewayAddress(final String gatewayAddress) {
+  public CamundaClientCloudBuilderStep4 gatewayAddress(final String gatewayAddress) {
     innerBuilder.gatewayAddress(gatewayAddress);
     return this;
   }
@@ -141,7 +141,7 @@ public class ZeebeClientCloudBuilderImpl
 
   @Override
   @ExperimentalApi("https://github.com/camunda/zeebe/issues/14106")
-  public CamundaClientBuilder defaultTenantId(final String tenantId) {
+  public CamundaClientCloudBuilderStep4 defaultTenantId(final String tenantId) {
     Loggers.LOGGER.debug(
         "Multi-tenancy in Camunda 8 SaaS will be supported with https://github.com/camunda/zeebe/issues/14106.");
     return this;
@@ -156,86 +156,86 @@ public class ZeebeClientCloudBuilderImpl
   }
 
   @Override
-  public CamundaClientBuilder defaultJobWorkerMaxJobsActive(final int maxJobsActive) {
+  public CamundaClientCloudBuilderStep4 defaultJobWorkerMaxJobsActive(final int maxJobsActive) {
     innerBuilder.defaultJobWorkerMaxJobsActive(maxJobsActive);
     return this;
   }
 
   @Override
-  public CamundaClientBuilder numJobWorkerExecutionThreads(final int numThreads) {
+  public CamundaClientCloudBuilderStep4 numJobWorkerExecutionThreads(final int numThreads) {
     innerBuilder.numJobWorkerExecutionThreads(numThreads);
     return this;
   }
 
   @Override
-  public CamundaClientBuilder jobWorkerExecutor(
+  public CamundaClientCloudBuilderStep4 jobWorkerExecutor(
       final ScheduledExecutorService executor, final boolean takeOwnership) {
     innerBuilder.jobWorkerExecutor(executor, takeOwnership);
     return this;
   }
 
   @Override
-  public CamundaClientBuilder defaultJobWorkerName(final String workerName) {
+  public CamundaClientCloudBuilderStep4 defaultJobWorkerName(final String workerName) {
     innerBuilder.defaultJobWorkerName(workerName);
     return this;
   }
 
   @Override
-  public CamundaClientBuilder defaultJobTimeout(final Duration timeout) {
+  public CamundaClientCloudBuilderStep4 defaultJobTimeout(final Duration timeout) {
     innerBuilder.defaultJobTimeout(timeout);
     return this;
   }
 
   @Override
-  public CamundaClientBuilder defaultJobPollInterval(final Duration pollInterval) {
+  public CamundaClientCloudBuilderStep4 defaultJobPollInterval(final Duration pollInterval) {
     innerBuilder.defaultJobPollInterval(pollInterval);
     return this;
   }
 
   @Override
-  public CamundaClientBuilder defaultMessageTimeToLive(final Duration timeToLive) {
+  public CamundaClientCloudBuilderStep4 defaultMessageTimeToLive(final Duration timeToLive) {
     innerBuilder.defaultMessageTimeToLive(timeToLive);
     return this;
   }
 
   @Override
-  public CamundaClientBuilder defaultRequestTimeout(final Duration requestTimeout) {
+  public CamundaClientCloudBuilderStep4 defaultRequestTimeout(final Duration requestTimeout) {
     innerBuilder.defaultRequestTimeout(requestTimeout);
     return this;
   }
 
   @Override
-  public CamundaClientBuilder usePlaintext() {
+  public CamundaClientCloudBuilderStep4 usePlaintext() {
     innerBuilder.usePlaintext();
     return this;
   }
 
   @Override
-  public CamundaClientBuilder caCertificatePath(final String certificatePath) {
+  public CamundaClientCloudBuilderStep4 caCertificatePath(final String certificatePath) {
     innerBuilder.caCertificatePath(certificatePath);
     return this;
   }
 
   @Override
-  public CamundaClientBuilder credentialsProvider(final CredentialsProvider credentialsProvider) {
+  public CamundaClientCloudBuilderStep4 credentialsProvider(final CredentialsProvider credentialsProvider) {
     innerBuilder.credentialsProvider(credentialsProvider);
     return this;
   }
 
   @Override
-  public CamundaClientBuilder keepAlive(final Duration keepAlive) {
+  public CamundaClientCloudBuilderStep4 keepAlive(final Duration keepAlive) {
     innerBuilder.keepAlive(keepAlive);
     return this;
   }
 
   @Override
-  public CamundaClientBuilder withInterceptors(final ClientInterceptor... interceptor) {
+  public CamundaClientCloudBuilderStep4 withInterceptors(final ClientInterceptor... interceptor) {
     innerBuilder.withInterceptors(interceptor);
     return this;
   }
 
   @Override
-  public CamundaClientBuilder withJsonMapper(final JsonMapper jsonMapper) {
+  public CamundaClientCloudBuilderStep4 withJsonMapper(final JsonMapper jsonMapper) {
     innerBuilder.withJsonMapper(jsonMapper);
     return this;
   }
