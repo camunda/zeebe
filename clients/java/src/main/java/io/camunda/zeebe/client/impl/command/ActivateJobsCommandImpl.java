@@ -136,8 +136,36 @@ public final class ActivateJobsCommandImpl
     return this;
   }
 
+  /**
+   * @deprecated since 8.6 for removal with 8.8, use {@link ActivateJobsCommandImpl#sendCommand()}
+   */
   @Override
-  public CamundaFuture<ActivateJobsResponse> send() {
+  @Deprecated
+  public ZeebeFuture<ActivateJobsResponse> send() {
+    builder.clearTenantIds();
+    if (customTenantIds.isEmpty()) {
+      builder.addAllTenantIds(defaultTenantIds);
+    } else {
+      builder.addAllTenantIds(customTenantIds);
+    }
+
+    final ActivateJobsRequest request = builder.build();
+
+    final ActivateJobsResponseImpl response = new ActivateJobsResponseImpl(jsonMapper);
+    final RetriableStreamingFutureImpl<ActivateJobsResponse, GatewayOuterClass.ActivateJobsResponse>
+        future =
+            new RetriableStreamingFutureImpl<>(
+                response,
+                response::addResponse,
+                retryPredicate,
+                streamObserver -> send(request, streamObserver));
+
+    send(request, future);
+    return future;
+  }
+
+  @Override
+  public CamundaFuture<ActivateJobsResponse> sendCommand() {
     builder.clearTenantIds();
     if (customTenantIds.isEmpty()) {
       builder.addAllTenantIds(defaultTenantIds);
