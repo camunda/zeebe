@@ -7,18 +7,19 @@
  */
 package io.camunda.zeebe.gateway.rest.controller.usermanagement;
 
-import io.camunda.identity.usermanagement.CamundaUser;
-import io.camunda.identity.usermanagement.CamundaUserWithPassword;
+import io.camunda.identity.rolemanagement.service.RoleMembershipService;
 import io.camunda.identity.usermanagement.service.UserService;
 import io.camunda.zeebe.gateway.protocol.rest.CamundaUserResponse;
 import io.camunda.zeebe.gateway.protocol.rest.CamundaUserWithPasswordRequest;
+import io.camunda.zeebe.gateway.protocol.rest.RoleResponse;
+import io.camunda.zeebe.gateway.protocol.rest.RoleSearchResponse;
 import io.camunda.zeebe.gateway.protocol.rest.SearchQueryRequest;
 import io.camunda.zeebe.gateway.protocol.rest.UserSearchResponse;
+import io.camunda.zeebe.gateway.rest.RestErrorMapper;
 import io.camunda.zeebe.gateway.rest.controller.ZeebeRestController;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,9 +33,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/v2/users")
 public class UserController {
   private final UserService userService;
+  private final RoleMembershipService roleMembershipService;
 
-  public UserController(final UserService userService) {
+  public UserController(
+      final UserService userService, final RoleMembershipService roleMembershipService) {
     this.userService = userService;
+    this.roleMembershipService = roleMembershipService;
   }
 
   @PostMapping(
@@ -44,11 +48,12 @@ public class UserController {
       @RequestBody final CamundaUserWithPasswordRequest userWithPasswordDto) {
     try {
       final CamundaUserResponse camundaUserResponse =
-          mapToCamundaUserResponse(
-              userService.createUser(mapToUserWithPassword(userWithPasswordDto)));
+          UserManagementMapper.mapToCamundaUserResponse(
+              userService.createUser(
+                  UserManagementMapper.mapToUserWithPassword(userWithPasswordDto)));
       return new ResponseEntity<>(camundaUserResponse, HttpStatus.CREATED);
     } catch (final Exception e) {
-      return handleException(e);
+      return RestErrorMapper.mapUserManagementExceptionsToResponse(e);
     }
   }
 
@@ -58,7 +63,7 @@ public class UserController {
       userService.deleteUser(id);
       return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     } catch (final Exception e) {
-      return handleException(e);
+      return RestErrorMapper.mapUserManagementExceptionsToResponse(e);
     }
   }
 
@@ -68,10 +73,10 @@ public class UserController {
   public ResponseEntity<Object> findUserById(@PathVariable final Long id) {
     try {
       final CamundaUserResponse camundaUserResponse =
-          mapToCamundaUserResponse(userService.findUserById(id));
+          UserManagementMapper.mapToCamundaUserResponse(userService.findUserById(id));
       return new ResponseEntity<>(camundaUserResponse, HttpStatus.OK);
     } catch (final Exception e) {
-      return handleException(e);
+      return RestErrorMapper.mapUserManagementExceptionsToResponse(e);
     }
   }
 
@@ -84,12 +89,14 @@ public class UserController {
     try {
       final UserSearchResponse responseDto = new UserSearchResponse();
       final List<CamundaUserResponse> allUsers =
-          userService.findAllUsers().stream().map(this::mapToCamundaUserResponse).toList();
+          userService.findAllUsers().stream()
+              .map(UserManagementMapper::mapToCamundaUserResponse)
+              .toList();
       responseDto.setItems(allUsers);
 
       return new ResponseEntity<>(responseDto, HttpStatus.OK);
     } catch (final Exception e) {
-      return handleException(e);
+      return RestErrorMapper.mapUserManagementExceptionsToResponse(e);
     }
   }
 
@@ -101,46 +108,46 @@ public class UserController {
       @PathVariable final Long id, @RequestBody final CamundaUserWithPasswordRequest user) {
     try {
       final CamundaUserResponse camundaUserResponse =
-          mapToCamundaUserResponse(userService.updateUser(id, mapToUserWithPassword(user)));
+          UserManagementMapper.mapToCamundaUserResponse(
+              userService.updateUser(id, UserManagementMapper.mapToUserWithPassword(user)));
       return new ResponseEntity<>(camundaUserResponse, HttpStatus.OK);
     } catch (final Exception e) {
-      return handleException(e);
+      return RestErrorMapper.mapUserManagementExceptionsToResponse(e);
     }
   }
 
-  private CamundaUserWithPassword mapToUserWithPassword(final CamundaUserWithPasswordRequest dto) {
-    final CamundaUserWithPassword camundaUserWithPassword = new CamundaUserWithPassword();
+  @PostMapping(
+      path = "/{id}/roles/search",
+      produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_PROBLEM_JSON_VALUE},
+      consumes = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<Object> findRolesOfUser(
+      @PathVariable("id") final Long userId,
+      @RequestBody(required = false) final SearchQueryRequest searchQueryRequest) {
+    try {
+      final RoleSearchResponse roleSearchResponse = new RoleSearchResponse();
+      final List<RoleResponse> allRoleResponses =
+          roleMembershipService.getRolesByUserId(userId).stream()
+              .map(UserManagementMapper::mapToRoleResponse)
+              .toList();
+      roleSearchResponse.setItems(allRoleResponses);
 
-    camundaUserWithPassword.setId(dto.getId());
-    camundaUserWithPassword.setUsername(dto.getUsername());
-    camundaUserWithPassword.setPassword(dto.getPassword());
-    camundaUserWithPassword.setName(dto.getName());
-    camundaUserWithPassword.setEmail(dto.getEmail());
-    camundaUserWithPassword.setEnabled(dto.getEnabled());
-
-    return camundaUserWithPassword;
-  }
-
-  private CamundaUserResponse mapToCamundaUserResponse(final CamundaUser camundaUser) {
-    final CamundaUserResponse camundaUserDto = new CamundaUserResponse();
-    camundaUserDto.setId(camundaUser.getId());
-    camundaUserDto.setUsername(camundaUser.getUsername());
-    camundaUserDto.setName(camundaUser.getName());
-    camundaUserDto.setEmail(camundaUser.getEmail());
-    camundaUserDto.setEnabled(camundaUser.isEnabled());
-
-    return camundaUserDto;
-  }
-
-  private ResponseEntity<Object> handleException(final Exception e) {
-    if (e instanceof IllegalArgumentException) {
-      final ProblemDetail problemDetail =
-          ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
-      return ResponseEntity.of(problemDetail).build();
+      return new ResponseEntity<>(roleSearchResponse, HttpStatus.OK);
+    } catch (final Exception e) {
+      return RestErrorMapper.mapUserManagementExceptionsToResponse(e);
     }
-
-    final ProblemDetail problemDetail =
-        ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
-    return ResponseEntity.of(problemDetail).build();
   }
+
+  @PostMapping(path = "/{id}/roles", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void assignRoleToUser(
+      @PathVariable("id") final long userId, @RequestBody final RoleAssignRequest request) {
+    roleMembershipService.assignRoleToUser(request.roleName(), userId);
+  }
+
+  //  @DeleteMapping(path = "/{id}/roles/{roleName}")
+  //  @ResponseStatus(HttpStatus.NO_CONTENT)
+  //  public void unassignRoleFromUser(
+  //      @PathVariable("id") final long userId, @PathVariable final String roleName) {
+  //    roleMembershipService.unassignRoleFromUser(roleName, userId);
+  //  }
 }
