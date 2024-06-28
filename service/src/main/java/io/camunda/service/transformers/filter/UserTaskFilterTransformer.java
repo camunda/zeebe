@@ -15,7 +15,6 @@ import static io.camunda.search.clients.query.SearchQueryBuilders.term;
 import io.camunda.search.clients.query.SearchQuery;
 import io.camunda.service.search.filter.DateValueFilter;
 import io.camunda.service.search.filter.UserTaskFilter;
-import io.camunda.service.search.filter.VariableValueFilter;
 import io.camunda.service.transformers.ServiceTransformers;
 import io.camunda.service.transformers.filter.DateValueFilterTransformer.DateFieldFilter;
 import java.util.Arrays;
@@ -42,6 +41,7 @@ public class UserTaskFilterTransformer implements FilterTransformer<UserTaskFilt
     final var processDefinitionKeyQuery =
         getProcessDefinitionKeyQuery(filter.processDefinitionKeys());
     final var bpmnProcessIdQuery = getBpmnProcessIdQuery(filter.processNames());
+    final var scopeKeyQuery = getScopeKeyQuery(filter.scopeKeys());
 
     final var candidateUsersQuery = getCandidateUsersQuery(filter.candidateUsers());
     final var candidateGroupsQuery = getCandidateGroupsQuery(filter.candidateGroups());
@@ -66,6 +66,7 @@ public class UserTaskFilterTransformer implements FilterTransformer<UserTaskFilt
         followUpDateQuery,
         processInstanceKeysQuery,
         processDefinitionKeyQuery,
+        scopeKeyQuery,
         tenantQuery,
         userTaksImplementationQuery);
   }
@@ -113,6 +114,10 @@ public class UserTaskFilterTransformer implements FilterTransformer<UserTaskFilt
     return stringTerms("candidateGroups", candidateGroups);
   }
 
+  private SearchQuery getScopeKeyQuery(final List<Long> scopeKeys) {
+    return longTerms("flowNodeInstanceId", scopeKeys);
+  }
+
   private SearchQuery getAssigneesQuery(final List<String> assignee) {
     return stringTerms("assignee", assignee);
   }
@@ -127,10 +132,6 @@ public class UserTaskFilterTransformer implements FilterTransformer<UserTaskFilt
 
   private SearchQuery getBpmnProcessIdQuery(final List<String> bpmnProcessId) {
     return stringTerms("bpmnProcessId", bpmnProcessId);
-  }
-
-  private FilterTransformer<VariableValueFilter> getVariableValueFilterTransformer() {
-    return transformers.getFilterTransformer(VariableValueFilter.class);
   }
 
   private FilterTransformer<DateFieldFilter> getDateValueFilterTransformer() {
