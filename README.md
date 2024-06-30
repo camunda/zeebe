@@ -1,10 +1,22 @@
-# Zeebe - Workflow Engine for Microservices Orchestration
+# Camunda 8 orchestrates complex business processes that span people, systems, and devices
 
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.camunda.zeebe/camunda-zeebe/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.camunda.zeebe/camunda-zeebe)
 
-Zeebe provides visibility into and control over business processes that span multiple microservices. It is the engine that powers [Camunda Platform 8](https://camunda.com/platform/zeebe/).
+Camunda 8 delivers scalable, on-demand process automation as a service. Camunda 8 is combined with powerful execution engines for BPMN processes and DMN decisions, and paired with tools for collaborative modeling, operations, and analytics.
 
-**Why Zeebe?**
+Camunda 8 consists of several components:
+
+* [Console](https://docs.camunda.io/docs/components/console/introduction-to-console/) - Configure and deploy clusters with Console.
+* Modelers 
+  * [Web Modeler](https://docs.camunda.io/docs/components/modeler/about-modeler/) - Web Application to model BPMN, DMN, & Forms and deploy or start new instances.
+  * [Desktop Modeler](https://docs.camunda.io/docs/next/components/modeler/desktop-modeler/) - Use Desktop Modeler as desktop application for modeling BPMN, DMN, and Forms with your local process application project.
+* [Zeebe](https://docs.camunda.io/docs/components/zeebe/zeebe-overview/) - The cloud-native process engine of Camunda 8.
+* [Tasklist](https://docs.camunda.io/docs/components/tasklist/introduction-to-tasklist/) - Complete tasks which require human input.
+* [Operate](https://docs.camunda.io/docs/components/operate/operate-introduction/) - Manage, monitor, and troubleshoot your processes.
+* [Optimize](https://docs.camunda.io/optimize/components/what-is-optimize/) - Improve your processes by identifying constraints in your system.
+* [Connectors](https://docs.camunda.io/docs/next/components/connectors/introduction-to-connectors/) - Integrate with an external system by using a Connector.
+
+Using Camunda 8, you can:
 
 * Define processes visually in [BPMN 2.0](https://www.omg.org/spec/BPMN/2.0.2/)
 * Choose your programming language
@@ -15,7 +27,7 @@ Zeebe provides visibility into and control over business processes that span mul
 * Export process data for monitoring and analysis
 * Engage with an active community
 
-[Learn more at camunda.com](https://camunda.com/platform/zeebe/)
+[Learn more at camunda.com](https://camunda.com/platform/).
 
 ## Release Lifecycle
 
@@ -59,7 +71,6 @@ To learn more about what we're currently working on, check the [GitHub issues](h
 * [Documentation Home](https://docs.camunda.io)
 * [Issue Tracker](https://github.com/camunda/camunda/issues)
 * [User Forum](https://forum.camunda.io)
-* [Slack Channel](https://www.camunda.com/slack)
 * [Contribution Guidelines](/CONTRIBUTING.md)
 
 ## Recommended Docs Entries for New Users
