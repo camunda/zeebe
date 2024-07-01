@@ -13,14 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.camunda.zeebe.client.impl;
+package io.camunda.zeebe.client.impl.http;
 
-public final class BuilderUtils {
-
-  private BuilderUtils() {}
-
-  public static void appendProperty(
-      final StringBuilder sb, final String propertyName, final Object value) {
-    sb.append(propertyName).append(": ").append(value).append("\n");
-  }
-}
+public class HttpCamundaFuture<RespT> extends HttpZeebeFuture<RespT> {}

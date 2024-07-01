@@ -15,6 +15,8 @@
  */
 package io.camunda.zeebe.client;
 
+import io.camunda.client.impl.CamundaClientBuilderImpl;
+import io.camunda.client.impl.CamundaClientCloudBuilderImpl;
 import io.camunda.zeebe.client.api.ExperimentalApi;
 import io.camunda.zeebe.client.api.command.AssignUserTaskCommandStep1;
 import io.camunda.zeebe.client.api.command.BroadcastSignalCommandStep1;
@@ -39,42 +41,52 @@ import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.client.api.search.ProcessInstanceQuery;
 import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.client.api.worker.JobWorkerBuilderStep1;
-import io.camunda.zeebe.client.impl.ZeebeClientBuilderImpl;
-import io.camunda.zeebe.client.impl.ZeebeClientCloudBuilderImpl;
 import io.camunda.zeebe.client.impl.ZeebeClientImpl;
 
 /** The client to communicate with a Zeebe broker/cluster. */
 public interface ZeebeClient extends AutoCloseable, JobClient {
 
   /**
+   * @deprecated since 8.6 for removal with 8.8, replaced by {@link
+   *     io.camunda.client.CamundaClient:newClient()}
    * @return a new Zeebe client with default configuration values. In order to customize
    *     configuration, use the methods {@link #newClientBuilder()} or {@link
    *     #newClient(ZeebeClientConfiguration)}. See {@link ZeebeClientBuilder} for the configuration
    *     options and default values.
    */
+  @Deprecated
   static ZeebeClient newClient() {
     return newClientBuilder().build();
   }
 
   /**
+   * @deprecated since 8.6 for removal with 8.8, replaced by {@link
+   *     io.camunda.client.CamundaClient:newClient(configuration)}
    * @return a new {@link ZeebeClient} using the provided configuration.
    */
+  @Deprecated
   static ZeebeClient newClient(final ZeebeClientConfiguration configuration) {
     return new ZeebeClientImpl(configuration);
   }
 
   /**
+   * @deprecated since 8.6 for removal with 8.8, replaced by {@link
+   *     io.camunda.client.CamundaClient:newClientBuilder()}
    * @return a builder to configure and create a new {@link ZeebeClient}.
    */
+  @Deprecated
   static ZeebeClientBuilder newClientBuilder() {
-    return new ZeebeClientBuilderImpl();
+    return new CamundaClientBuilderImpl();
   }
 
   /**
+   * @deprecated since 8.6 for removal with 8.8, replaced by {@link
+   *     io.camunda.client.CamundaClient:newClientCloudBuilder()}
    * @return a builder with convenient methods to connect to the Camunda Cloud cluster.
    */
+  @Deprecated
   static ZeebeClientCloudBuilderStep1 newCloudClientBuilder() {
-    return new ZeebeClientCloudBuilderImpl();
+    return new CamundaClientCloudBuilderImpl();
   }
 
   /**
@@ -98,8 +110,11 @@ public interface ZeebeClient extends AutoCloseable, JobClient {
   TopologyRequestStep1 newTopologyRequest();
 
   /**
+   * @deprecated since 8.6 for removal with 8.8, replaced by {@link
+   *     io.camunda.client.CamundaClient:getConfiguration()}
    * @return the client's configuration
    */
+  @Deprecated
   ZeebeClientConfiguration getConfiguration();
 
   @Override

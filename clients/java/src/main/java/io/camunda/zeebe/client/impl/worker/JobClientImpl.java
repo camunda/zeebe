@@ -15,6 +15,7 @@
  */
 package io.camunda.zeebe.client.impl.worker;
 
+import io.camunda.client.CamundaClientConfiguration;
 import io.camunda.zeebe.client.CredentialsProvider.StatusCode;
 import io.camunda.zeebe.client.ZeebeClientConfiguration;
 import io.camunda.zeebe.client.api.JsonMapper;
@@ -40,6 +41,23 @@ public final class JobClientImpl implements JobClient {
   private final JsonMapper jsonMapper;
   private final Predicate<StatusCode> retryPredicate;
 
+  public JobClientImpl(
+      final GatewayStub asyncStub,
+      final CamundaClientConfiguration config,
+      final JsonMapper jsonMapper,
+      final Predicate<StatusCode> retryPredicate) {
+    this.asyncStub = asyncStub;
+    this.config = config;
+    this.jsonMapper = jsonMapper;
+    this.retryPredicate = retryPredicate;
+  }
+
+  /**
+   * @deprecated since 8.6.0 for removal with 8.8.0, use {@link
+   *     JobClientImpl#JobClientImpl(GatewayStub asyncStub, CamundaClientConfiguration config,
+   *     JsonMapper jsonMapper, Predicate retryPredicate)}
+   */
+  @Deprecated
   public JobClientImpl(
       final GatewayStub asyncStub,
       final ZeebeClientConfiguration config,

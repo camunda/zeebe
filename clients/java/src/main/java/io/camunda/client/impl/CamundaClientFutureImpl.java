@@ -13,14 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.camunda.zeebe.client.impl;
+package io.camunda.client.impl;
 
-public final class BuilderUtils {
+import io.camunda.zeebe.client.impl.ZeebeClientFutureImpl;
+import java.util.function.Function;
 
-  private BuilderUtils() {}
+public class CamundaClientFutureImpl<ClientResponse, BrokerResponse>
+    extends ZeebeClientFutureImpl<ClientResponse, BrokerResponse> {
 
-  public static void appendProperty(
-      final StringBuilder sb, final String propertyName, final Object value) {
-    sb.append(propertyName).append(": ").append(value).append("\n");
+  public CamundaClientFutureImpl() {
+    super();
+  }
+
+  public CamundaClientFutureImpl(final Function<BrokerResponse, ClientResponse> responseMapper) {
+    super(responseMapper);
   }
 }

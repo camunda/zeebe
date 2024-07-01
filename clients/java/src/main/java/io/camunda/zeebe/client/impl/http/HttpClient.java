@@ -100,7 +100,7 @@ public final class HttpClient implements AutoCloseable {
       final RequestConfig requestConfig,
       final Class<HttpT> responseType,
       final JsonResponseTransformer<HttpT, RespT> transformer,
-      final HttpZeebeFuture<RespT> result) {
+      final HttpCamundaFuture<RespT> result) {
     sendRequest(Method.GET, path, null, requestConfig, responseType, transformer, result);
   }
 
@@ -108,8 +108,8 @@ public final class HttpClient implements AutoCloseable {
       final String path,
       final String body,
       final RequestConfig requestConfig,
-      final HttpZeebeFuture<RespT> result) {
-    post(path, body, requestConfig, Void.class, r -> null, result);
+      final HttpCamundaFuture<RespT> result) {
+    sendRequest(Method.POST, path, body, requestConfig, Void.class, r -> null, result);
   }
 
   public <HttpT, RespT> void post(
@@ -118,7 +118,7 @@ public final class HttpClient implements AutoCloseable {
       final RequestConfig requestConfig,
       final Class<HttpT> responseType,
       final JsonResponseTransformer<HttpT, RespT> transformer,
-      final HttpZeebeFuture<RespT> result) {
+      final HttpCamundaFuture<RespT> result) {
     sendRequest(Method.POST, path, body, requestConfig, responseType, transformer, result);
   }
 
@@ -126,12 +126,12 @@ public final class HttpClient implements AutoCloseable {
       final String path,
       final String body,
       final RequestConfig requestConfig,
-      final HttpZeebeFuture<RespT> result) {
+      final HttpCamundaFuture<RespT> result) {
     sendRequest(Method.PATCH, path, body, requestConfig, Void.class, r -> null, result);
   }
 
   public <RespT> void delete(
-      final String path, final RequestConfig requestConfig, final HttpZeebeFuture<RespT> result) {
+      final String path, final RequestConfig requestConfig, final HttpCamundaFuture<RespT> result) {
     sendRequest(Method.DELETE, path, null, requestConfig, Void.class, r -> null, result);
   }
 
@@ -142,7 +142,7 @@ public final class HttpClient implements AutoCloseable {
       final RequestConfig requestConfig,
       final Class<HttpT> responseType,
       final JsonResponseTransformer<HttpT, RespT> transformer,
-      final HttpZeebeFuture<RespT> result) {
+      final HttpCamundaFuture<RespT> result) {
     final URI target = buildRequestURI(path);
     final Runnable retryAction =
         () -> {

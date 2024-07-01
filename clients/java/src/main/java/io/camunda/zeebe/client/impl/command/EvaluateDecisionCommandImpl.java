@@ -15,6 +15,8 @@
  */
 package io.camunda.zeebe.client.impl.command;
 
+import io.camunda.client.CamundaClientConfiguration;
+import io.camunda.client.api.CamundaFuture;
 import io.camunda.zeebe.client.CredentialsProvider.StatusCode;
 import io.camunda.zeebe.client.ZeebeClientConfiguration;
 import io.camunda.zeebe.client.api.JsonMapper;
@@ -47,6 +49,26 @@ public class EvaluateDecisionCommandImpl extends CommandWithVariables<EvaluateDe
   public EvaluateDecisionCommandImpl(
       final GatewayStub asyncStub,
       final JsonMapper jsonMapper,
+      final CamundaClientConfiguration config,
+      final Predicate<StatusCode> retryPredicate) {
+    super(jsonMapper);
+    this.asyncStub = asyncStub;
+    requestTimeout = config.getDefaultRequestTimeout();
+    this.retryPredicate = retryPredicate;
+    this.jsonMapper = jsonMapper;
+    builder = EvaluateDecisionRequest.newBuilder();
+    tenantId(config.getDefaultTenantId());
+  }
+
+  /**
+   * @deprecated since 8.6.0 for removal with 8.8.0, use {@link
+   *     EvaluateDecisionCommandImpl#EvaluateDecisionCommandImpl(GatewayStub asyncStub, JsonMapper
+   *     jsonMapper, CamundaClientConfiguration config, Predicate retryPredicate)}
+   */
+  @Deprecated
+  public EvaluateDecisionCommandImpl(
+      final GatewayStub asyncStub,
+      final JsonMapper jsonMapper,
       final ZeebeClientConfiguration config,
       final Predicate<StatusCode> retryPredicate) {
     super(jsonMapper);
@@ -69,6 +91,7 @@ public class EvaluateDecisionCommandImpl extends CommandWithVariables<EvaluateDe
    *     EvaluateDecisionCommandImpl#EvaluateDecisionCommandImpl(GatewayStub asyncStub, JsonMapper
    *     jsonMapper, ZeebeClientConfiguration config, Predicate retryPredicate)}
    */
+  @Deprecated
   public EvaluateDecisionCommandImpl(
       final GatewayStub asyncStub,
       final JsonMapper jsonMapper,
@@ -107,8 +130,30 @@ public class EvaluateDecisionCommandImpl extends CommandWithVariables<EvaluateDe
     return this;
   }
 
+  /**
+   * @deprecated since 8.6 for removal with 8.8, use {@link
+   *     EvaluateDecisionCommandImpl#sendCommand()}
+   */
   @Override
+  @Deprecated
   public ZeebeFuture<EvaluateDecisionResponse> send() {
+    final EvaluateDecisionRequest request = builder.build();
+
+    final RetriableClientFutureImpl<
+            EvaluateDecisionResponse, GatewayOuterClass.EvaluateDecisionResponse>
+        future =
+            new RetriableClientFutureImpl<>(
+                gatewayResponse -> new EvaluateDecisionResponseImpl(jsonMapper, gatewayResponse),
+                retryPredicate,
+                streamObserver -> send(request, streamObserver));
+
+    send(request, future);
+
+    return future;
+  }
+
+  @Override
+  public CamundaFuture<EvaluateDecisionResponse> sendCommand() {
     final EvaluateDecisionRequest request = builder.build();
 
     final RetriableClientFutureImpl<

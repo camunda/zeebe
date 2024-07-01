@@ -15,6 +15,7 @@
  */
 package io.camunda.zeebe.client.impl;
 
+import io.camunda.client.impl.CamundaClientFutureImpl;
 import io.camunda.zeebe.client.CredentialsProvider.StatusCode;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
@@ -23,7 +24,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-public final class RetriableClientFutureImpl<R, T> extends ZeebeClientFutureImpl<R, T> {
+public final class RetriableClientFutureImpl<R, T> extends CamundaClientFutureImpl<R, T> {
 
   private final Predicate<StatusCode> retryPredicate;
   private final Consumer<StreamObserver<T>> retryAction;

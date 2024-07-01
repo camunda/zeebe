@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.camunda.zeebe.client.impl;
+package io.camunda.client.impl;
 
 import io.camunda.zeebe.client.CredentialsProvider;
 import io.camunda.zeebe.client.CredentialsProvider.CredentialsApplier;
@@ -25,12 +25,12 @@ import java.util.concurrent.Executor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class ZeebeCallCredentials extends io.grpc.CallCredentials {
-  private static final Logger LOG = LoggerFactory.getLogger(ZeebeCallCredentials.class);
+public final class CamundaCallCredentials extends io.grpc.CallCredentials {
+  private static final Logger LOG = LoggerFactory.getLogger(CamundaCallCredentials.class);
 
   private final CredentialsProvider credentialsProvider;
 
-  ZeebeCallCredentials(final CredentialsProvider credentialsProvider) {
+  public CamundaCallCredentials(final CredentialsProvider credentialsProvider) {
     this.credentialsProvider = credentialsProvider;
   }
 

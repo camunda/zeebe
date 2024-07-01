@@ -28,11 +28,12 @@ import static io.camunda.zeebe.client.ClientProperties.USE_PLAINTEXT_CONNECTION;
 import static io.camunda.zeebe.client.impl.BuilderUtils.appendProperty;
 import static io.camunda.zeebe.client.impl.util.DataSizeUtil.ONE_MB;
 
+import io.camunda.client.CamundaClient;
+import io.camunda.client.CamundaClientBuilder;
+import io.camunda.client.CamundaClientConfiguration;
+import io.camunda.client.impl.CamundaClientImpl;
 import io.camunda.zeebe.client.ClientProperties;
 import io.camunda.zeebe.client.CredentialsProvider;
-import io.camunda.zeebe.client.ZeebeClient;
-import io.camunda.zeebe.client.ZeebeClientBuilder;
-import io.camunda.zeebe.client.ZeebeClientConfiguration;
 import io.camunda.zeebe.client.api.JsonMapper;
 import io.camunda.zeebe.client.api.command.CommandWithTenantStep;
 import io.camunda.zeebe.client.impl.oauth.OAuthCredentialsProviderBuilder;
@@ -49,7 +50,12 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ScheduledExecutorService;
 
-public final class ZeebeClientBuilderImpl implements ZeebeClientBuilder, ZeebeClientConfiguration {
+/**
+ * @deprecated since 8.6 for removal with 8.8, replaced by {@link
+ *     io.camunda.client.impl.CamundaClientBuilderImpl}
+ */
+@Deprecated
+public class ZeebeClientBuilderImpl implements CamundaClientBuilder, CamundaClientConfiguration {
 
   public static final String PLAINTEXT_CONNECTION_VAR = "ZEEBE_INSECURE_CONNECTION";
   public static final String CA_CERTIFICATE_VAR = "ZEEBE_CA_CERTIFICATE_PATH";
@@ -228,7 +234,7 @@ public final class ZeebeClientBuilderImpl implements ZeebeClientBuilder, ZeebeCl
   }
 
   @Override
-  public ZeebeClientBuilder withProperties(final Properties properties) {
+  public CamundaClientBuilder withProperties(final Properties properties) {
     if (properties.containsKey(ClientProperties.APPLY_ENVIRONMENT_VARIABLES_OVERRIDES)) {
       applyEnvironmentVariableOverrides(
           Boolean.parseBoolean(
@@ -323,57 +329,57 @@ public final class ZeebeClientBuilderImpl implements ZeebeClientBuilder, ZeebeCl
   }
 
   @Override
-  public ZeebeClientBuilder applyEnvironmentVariableOverrides(
+  public CamundaClientBuilder applyEnvironmentVariableOverrides(
       final boolean applyEnvironmentVariableOverrides) {
     this.applyEnvironmentVariableOverrides = applyEnvironmentVariableOverrides;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder gatewayAddress(final String gatewayAddress) {
+  public CamundaClientBuilder gatewayAddress(final String gatewayAddress) {
     this.gatewayAddress = gatewayAddress;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder restAddress(final URI restAddress) {
+  public CamundaClientBuilder restAddress(final URI restAddress) {
     this.restAddress = restAddress;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder grpcAddress(final URI grpcAddress) {
+  public CamundaClientBuilder grpcAddress(final URI grpcAddress) {
     this.grpcAddress = grpcAddress;
     grpcAddressUsed = true;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder defaultTenantId(final String tenantId) {
+  public CamundaClientBuilder defaultTenantId(final String tenantId) {
     defaultTenantId = tenantId;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder defaultJobWorkerTenantIds(final List<String> tenantIds) {
+  public CamundaClientBuilder defaultJobWorkerTenantIds(final List<String> tenantIds) {
     defaultJobWorkerTenantIds = tenantIds;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder defaultJobWorkerMaxJobsActive(final int maxJobsActive) {
+  public CamundaClientBuilder defaultJobWorkerMaxJobsActive(final int maxJobsActive) {
     jobWorkerMaxJobsActive = maxJobsActive;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder numJobWorkerExecutionThreads(final int numSubscriptionThreads) {
+  public CamundaClientBuilder numJobWorkerExecutionThreads(final int numSubscriptionThreads) {
     numJobWorkerExecutionThreads = numSubscriptionThreads;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder jobWorkerExecutor(
+  public CamundaClientBuilder jobWorkerExecutor(
       final ScheduledExecutorService executor, final boolean takeOwnership) {
     jobWorkerExecutor = executor;
     ownsJobWorkerExecutor = takeOwnership;
@@ -381,7 +387,7 @@ public final class ZeebeClientBuilderImpl implements ZeebeClientBuilder, ZeebeCl
   }
 
   @Override
-  public ZeebeClientBuilder defaultJobWorkerName(final String workerName) {
+  public CamundaClientBuilder defaultJobWorkerName(final String workerName) {
     if (workerName != null) {
       defaultJobWorkerName = workerName;
     }
@@ -389,49 +395,49 @@ public final class ZeebeClientBuilderImpl implements ZeebeClientBuilder, ZeebeCl
   }
 
   @Override
-  public ZeebeClientBuilder defaultJobTimeout(final Duration timeout) {
+  public CamundaClientBuilder defaultJobTimeout(final Duration timeout) {
     defaultJobTimeout = timeout;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder defaultJobPollInterval(final Duration pollInterval) {
+  public CamundaClientBuilder defaultJobPollInterval(final Duration pollInterval) {
     defaultJobPollInterval = pollInterval;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder defaultMessageTimeToLive(final Duration timeToLive) {
+  public CamundaClientBuilder defaultMessageTimeToLive(final Duration timeToLive) {
     defaultMessageTimeToLive = timeToLive;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder defaultRequestTimeout(final Duration requestTimeout) {
+  public CamundaClientBuilder defaultRequestTimeout(final Duration requestTimeout) {
     defaultRequestTimeout = requestTimeout;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder usePlaintext() {
+  public CamundaClientBuilder usePlaintext() {
     usePlaintextConnection = true;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder caCertificatePath(final String certificatePath) {
+  public CamundaClientBuilder caCertificatePath(final String certificatePath) {
     this.certificatePath = certificatePath;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder credentialsProvider(final CredentialsProvider credentialsProvider) {
+  public CamundaClientBuilder credentialsProvider(final CredentialsProvider credentialsProvider) {
     this.credentialsProvider = credentialsProvider;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder keepAlive(final Duration keepAlive) {
+  public CamundaClientBuilder keepAlive(final Duration keepAlive) {
     if (keepAlive.isNegative() || keepAlive.isZero()) {
       throw new IllegalArgumentException("The keep alive must be a positive number.");
     }
@@ -441,49 +447,49 @@ public final class ZeebeClientBuilderImpl implements ZeebeClientBuilder, ZeebeCl
   }
 
   @Override
-  public ZeebeClientBuilder withInterceptors(final ClientInterceptor... interceptors) {
+  public CamundaClientBuilder withInterceptors(final ClientInterceptor... interceptors) {
     this.interceptors.addAll(Arrays.asList(interceptors));
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder withJsonMapper(final JsonMapper jsonMapper) {
+  public CamundaClientBuilder withJsonMapper(final JsonMapper jsonMapper) {
     this.jsonMapper = jsonMapper;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder overrideAuthority(final String authority) {
+  public CamundaClientBuilder overrideAuthority(final String authority) {
     overrideAuthority = authority;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder maxMessageSize(final int maxMessageSize) {
+  public CamundaClientBuilder maxMessageSize(final int maxMessageSize) {
     this.maxMessageSize = maxMessageSize;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder defaultJobWorkerStreamEnabled(final boolean streamEnabled) {
+  public CamundaClientBuilder defaultJobWorkerStreamEnabled(final boolean streamEnabled) {
     this.streamEnabled = streamEnabled;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder useDefaultRetryPolicy(final boolean useDefaultRetryPolicy) {
+  public CamundaClientBuilder useDefaultRetryPolicy(final boolean useDefaultRetryPolicy) {
     this.useDefaultRetryPolicy = useDefaultRetryPolicy;
     return this;
   }
 
   @Override
-  public ZeebeClientBuilder preferRestOverGrpc(final boolean preferRestOverGrpc) {
+  public CamundaClientBuilder preferRestOverGrpc(final boolean preferRestOverGrpc) {
     this.preferRestOverGrpc = preferRestOverGrpc;
     return this;
   }
 
   @Override
-  public ZeebeClient build() {
+  public CamundaClient build() {
     if (applyEnvironmentVariableOverrides) {
       applyOverrides();
     }
@@ -493,7 +499,7 @@ public final class ZeebeClientBuilderImpl implements ZeebeClientBuilder, ZeebeCl
       grpcAddress(getURIFromString(scheme + getGatewayAddress()));
     }
 
-    return new ZeebeClientImpl(this);
+    return new CamundaClientImpl(this);
   }
 
   private void keepAlive(final String keepAlive) {
