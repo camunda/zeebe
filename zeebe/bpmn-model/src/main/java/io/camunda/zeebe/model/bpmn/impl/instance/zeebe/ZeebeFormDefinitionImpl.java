@@ -106,6 +106,7 @@ public class ZeebeFormDefinitionImpl extends BpmnModelElementInstanceImpl
         typeBuilder
             .enumAttribute(ZeebeConstants.ATTRIBUTE_BINDING_TYPE, ZeebeBindingType.class)
             .namespace(BpmnModelConstants.ZEEBE_NS)
+            .defaultValue(ZeebeBindingType.latest)
             .build();
 
     typeBuilder.build();

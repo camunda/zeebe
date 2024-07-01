@@ -17,7 +17,6 @@ package io.camunda.zeebe.model.bpmn.validation.zeebe;
 
 import io.camunda.zeebe.model.bpmn.impl.BpmnModelConstants;
 import io.camunda.zeebe.model.bpmn.impl.ZeebeConstants;
-import io.camunda.zeebe.model.bpmn.instance.zeebe.ZeebeBindingType;
 import io.camunda.zeebe.model.bpmn.instance.zeebe.ZeebeFormDefinition;
 import org.camunda.bpm.model.xml.instance.ModelElementInstance;
 import org.camunda.bpm.model.xml.validation.ModelElementValidator;
@@ -27,8 +26,6 @@ public class ZeebeFormDefinitionValidator implements ModelElementValidator<Zeebe
 
   private static final String ERROR_MESSAGE_ONE_NONEMPTY_ELEMENT =
       "Exactly one of the attributes '%s, %s' must be present and not blank%s";
-  private static final String ERROR_MESSAGE_INVALID_ATTRIBUTE_COMBINATION =
-      "Attribute '%s' must not be used in combination with attribute '%s'";
 
   @Override
   public Class<ZeebeFormDefinition> getElementType() {
@@ -42,7 +39,6 @@ public class ZeebeFormDefinitionValidator implements ModelElementValidator<Zeebe
     final String formKey = element.getFormKey();
     final String formId = element.getFormId();
     final String externalReference = element.getExternalReference();
-    final ZeebeBindingType bindingType = element.getBindingType();
 
     final ModelElementInstance nativeUserTaskElement =
         element
@@ -60,14 +56,6 @@ public class ZeebeFormDefinitionValidator implements ModelElementValidator<Zeebe
                 ZeebeConstants.ATTRIBUTE_FORM_KEY,
                 ""));
       }
-      if (!isBlank(formKey) && bindingType != null) {
-        validationResultCollector.addError(
-            0,
-            String.format(
-                ERROR_MESSAGE_INVALID_ATTRIBUTE_COMBINATION,
-                ZeebeConstants.ATTRIBUTE_FORM_KEY,
-                ZeebeConstants.ATTRIBUTE_BINDING_TYPE));
-      }
     } else {
       if (isBlank(externalReference) == isBlank(formId)) {
         validationResultCollector.addError(
@@ -77,14 +65,6 @@ public class ZeebeFormDefinitionValidator implements ModelElementValidator<Zeebe
                 ZeebeConstants.ATTRIBUTE_FORM_ID,
                 ZeebeConstants.ATTRIBUTE_EXTERNAL_REFERENCE,
                 " for native user tasks"));
-      }
-      if (!isBlank(externalReference) && bindingType != null) {
-        validationResultCollector.addError(
-            0,
-            String.format(
-                ERROR_MESSAGE_INVALID_ATTRIBUTE_COMBINATION,
-                ZeebeConstants.ATTRIBUTE_EXTERNAL_REFERENCE,
-                ZeebeConstants.ATTRIBUTE_BINDING_TYPE));
       }
     }
   }
