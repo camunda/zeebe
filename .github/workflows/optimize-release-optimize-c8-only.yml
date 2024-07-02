@@ -281,10 +281,6 @@ jobs:
           ELASTIC_VERSION: ${{ steps.pom-info.outputs.x_elasticsearch8_test_version }}
           ZEEBE_VERSION: ${{ steps.pom-info.outputs.x_zeebe_version }}
           IDENTITY_VERSION: ${{ steps.pom-info.outputs.x_identity_version }}
-      # ^ starting ~2023-10-10, the hostname resolution for the cambpm docker-compose service
-      # http://cambpm:8080 does not work anymore for neither SaaS nor self-hosted Linux runners.
-      # 172.17.0.1 is the host IP address from the container perspective, and cambpm is running
-      # exposed there on port 8080.
 
       - name: Wait for Optimize to start
         run: ./.github/scripts/wait-for.sh http://localhost:8090/ready
