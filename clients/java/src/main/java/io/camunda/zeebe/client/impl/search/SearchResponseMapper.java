@@ -21,8 +21,11 @@ import io.camunda.zeebe.client.api.search.response.SearchResponsePage;
 import io.camunda.zeebe.client.impl.search.response.ProcessInstanceImpl;
 import io.camunda.zeebe.client.impl.search.response.SearchQueryResponseImpl;
 import io.camunda.zeebe.client.impl.search.response.SearchResponsePageImpl;
+import io.camunda.zeebe.client.impl.search.response.UserTaskImpl;
 import io.camunda.zeebe.client.protocol.rest.ProcessInstanceSearchQueryResponse;
 import io.camunda.zeebe.client.protocol.rest.SearchQueryPageResponse;
+import io.camunda.zeebe.client.protocol.rest.UserTaskItem;
+import io.camunda.zeebe.client.protocol.rest.UserTaskSearchQueryResponse;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -35,11 +38,7 @@ public final class SearchResponseMapper {
   public static SearchQueryResponse<ProcessInstance> toProcessInstanceSearchResponse(
       final ProcessInstanceSearchQueryResponse response) {
     final SearchQueryPageResponse pageResponse = response.getPage();
-    final SearchResponsePage page =
-        new SearchResponsePageImpl(
-            pageResponse.getTotalItems(),
-            pageResponse.getFirstSortValues(),
-            pageResponse.getLastSortValues());
+    final SearchResponsePage page = toSearchResponsePage(pageResponse);
 
     final List<ProcessInstance> instances =
         Optional.ofNullable(response.getItems())
@@ -47,10 +46,36 @@ public final class SearchResponseMapper {
                 (i) ->
                     i.stream()
                         .map(ProcessInstanceImpl::new)
-                        .map((p) -> (ProcessInstance) p)
+                        .map(ProcessInstance.class::cast)
                         .collect(Collectors.toList()))
             .orElse(Collections.emptyList());
 
     return new SearchQueryResponseImpl<>(instances, page);
+  }
+
+  public static SearchQueryResponse<UserTaskItem> toUserTaskSearchResponse(
+      final UserTaskSearchQueryResponse response) {
+    final SearchQueryPageResponse pageResponse = response.getPage();
+    final SearchResponsePage page = toSearchResponsePage(pageResponse);
+
+    final List<UserTaskItem> userTasks =
+        Optional.ofNullable(response.getItems())
+            .map(
+                (i) ->
+                    i.stream()
+                        .map(UserTaskImpl::new)
+                        .map(UserTaskItem.class::cast)
+                        .collect(Collectors.toList()))
+            .orElse(Collections.emptyList());
+
+    return new SearchQueryResponseImpl<>(userTasks, page);
+  }
+
+  private static SearchResponsePage toSearchResponsePage(
+      final SearchQueryPageResponse pageResponse) {
+    return new SearchResponsePageImpl(
+        pageResponse.getTotalItems(),
+        pageResponse.getFirstSortValues(),
+        pageResponse.getLastSortValues());
   }
 }
