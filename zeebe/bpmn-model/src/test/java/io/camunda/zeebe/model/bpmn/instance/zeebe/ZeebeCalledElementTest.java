@@ -22,13 +22,13 @@ import io.camunda.zeebe.model.bpmn.Bpmn;
 import io.camunda.zeebe.model.bpmn.BpmnModelInstance;
 import io.camunda.zeebe.model.bpmn.impl.BpmnModelConstants;
 import io.camunda.zeebe.model.bpmn.instance.BpmnModelElementInstanceTest;
-import io.camunda.zeebe.model.bpmn.instance.UserTask;
+import io.camunda.zeebe.model.bpmn.instance.CallActivity;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import org.junit.Test;
 
-public class ZeebeFormDefinitionTest extends BpmnModelElementInstanceTest {
+public class ZeebeCalledElementTest extends BpmnModelElementInstanceTest {
 
   @Override
   public TypeAssumption getTypeAssumption() {
@@ -43,9 +43,11 @@ public class ZeebeFormDefinitionTest extends BpmnModelElementInstanceTest {
   @Override
   public Collection<AttributeAssumption> getAttributesAssumptions() {
     return Arrays.asList(
-        new AttributeAssumption(BpmnModelConstants.ZEEBE_NS, "formKey", false, false),
-        new AttributeAssumption(BpmnModelConstants.ZEEBE_NS, "formId", false, false),
-        new AttributeAssumption(BpmnModelConstants.ZEEBE_NS, "externalReference", false, false),
+        new AttributeAssumption(BpmnModelConstants.ZEEBE_NS, "processId", false, false),
+        new AttributeAssumption(
+            BpmnModelConstants.ZEEBE_NS, "propagateAllChildVariables", false, false, true),
+        new AttributeAssumption(
+            BpmnModelConstants.ZEEBE_NS, "propagateAllParentVariables", false, false, true),
         new AttributeAssumption(
             BpmnModelConstants.ZEEBE_NS, "bindingType", false, false, ZeebeBindingType.latest));
   }
@@ -54,30 +56,30 @@ public class ZeebeFormDefinitionTest extends BpmnModelElementInstanceTest {
   public void shouldReadValidBindingType() {
     // given
     final BpmnModelInstance modelInstance =
-        Bpmn.readModelFromStream(getClass().getResourceAsStream("ZeebeFormDefinitionTest.bpmn"));
-    final UserTask userTask = modelInstance.getModelElementById("user-task-1");
+        Bpmn.readModelFromStream(getClass().getResourceAsStream("ZeebeCalledElementTest.bpmn"));
+    final CallActivity callActivity = modelInstance.getModelElementById("call-activity-1");
 
     // when
-    final ZeebeFormDefinition formDefinition =
-        userTask.getSingleExtensionElement(ZeebeFormDefinition.class);
+    final ZeebeCalledElement calledElement =
+        callActivity.getSingleExtensionElement(ZeebeCalledElement.class);
 
     // then
-    assertThat(formDefinition.getBindingType()).isEqualTo(ZeebeBindingType.deployment);
+    assertThat(calledElement.getBindingType()).isEqualTo(ZeebeBindingType.deployment);
   }
 
   @Test
   public void shouldThrowExceptionForInvalidBindingType() {
     // given
     final BpmnModelInstance modelInstance =
-        Bpmn.readModelFromStream(getClass().getResourceAsStream("ZeebeFormDefinitionTest.bpmn"));
-    final UserTask userTask = modelInstance.getModelElementById("user-task-2");
+        Bpmn.readModelFromStream(getClass().getResourceAsStream("ZeebeCalledElementTest.bpmn"));
+    final CallActivity callActivity = modelInstance.getModelElementById("call-activity-2");
 
     // when
-    final ZeebeFormDefinition formDefinition =
-        userTask.getSingleExtensionElement(ZeebeFormDefinition.class);
+    final ZeebeCalledElement calledElement =
+        callActivity.getSingleExtensionElement(ZeebeCalledElement.class);
 
     // then
-    assertThatThrownBy(formDefinition::getBindingType)
+    assertThatThrownBy(calledElement::getBindingType)
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage(
             "No enum constant io.camunda.zeebe.model.bpmn.instance.zeebe.ZeebeBindingType.foo");
