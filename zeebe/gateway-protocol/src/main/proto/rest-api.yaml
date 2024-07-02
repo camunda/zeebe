@@ -273,7 +273,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
         "404":
-          description: "Not found"
+          description: "Bad request"
           content:
             application/problem+json:
               schema:
@@ -319,7 +319,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
         "404":
-          description: "Not found"
+          description: "Bad request"
           content:
             application/problem+json:
               schema:
@@ -1227,6 +1227,12 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CamundaGroupResponse"
+    AssignUserToGroupRequest:
+      type: "object"
+      properties:
+        userId:
+          type: "integer"
+          format: "int64"
   securitySchemes:
     bearerAuth:
       type: http
